@@ -67,10 +67,12 @@ PyTorch data augmentation is applied as defined by the method
 :meth:`ILSVRC2012Data.torch_input_transforms`. Images will be resized and
 cropped to size 224 x 224.
 """
+import warnings
+
 # FIXME We currently rely too much on the internals of class ImageFolder.
 import torchvision
-import warnings
 from packaging import version
+
 if version.parse(torchvision.__version__) < version.parse('0.2.2'):
     # FIXME Probably not necessary to enforce, just ignore non-existing
     # "targets" field.
@@ -92,6 +94,7 @@ from copy import deepcopy
 import warnings
 
 from data.large_img_dataset import LargeImgDataset
+
 
 class ILSVRC2012Data(LargeImgDataset):
     """An instance of the class shall represent the ILSVRC2012 dataset.
@@ -142,7 +145,7 @@ class ILSVRC2012Data(LargeImgDataset):
     def __init__(self, data_path, use_one_hot=False, num_val_per_class=0):
         # 732 is the minimum number of training samples per class in
         # ILSVRC2012.
-        assert(num_val_per_class < 732)
+        assert (num_val_per_class < 732)
         # We keep the full path to each image in memory, so we don't need to
         # tell the super class the root path to each image (i.e., samples
         # contain absolute not relative paths).
@@ -157,16 +160,16 @@ class ILSVRC2012Data(LargeImgDataset):
         val_dir = os.path.join(data_path, ILSVRC2012Data._VAL_FOLDER)
 
         err_msg = 'Please follow the steps described in the file ' + \
-            'data/README.md to download and extract the data.'
+                  'data/README.md to download and extract the data.'
         if not os.path.exists(train_dir):
             raise FileNotFoundError('Training images not found in directory ' +
-                train_dir + '.\n' + err_msg)
+                                    train_dir + '.\n' + err_msg)
         elif not os.path.exists(val_dir):
             raise FileNotFoundError('Validation images not found in ' +
-                'directory ' + val_dir + '.\n' + err_msg)
+                                    'directory ' + val_dir + '.\n' + err_msg)
         elif not os.path.exists(meta_fn):
             raise FileNotFoundError('Meta file not found: ' +
-                meta_fn + '.\n' + err_msg)
+                                    meta_fn + '.\n' + err_msg)
 
         # Read meta file.
         self._data['meta'] = dict()
@@ -194,8 +197,8 @@ class ILSVRC2012Data(LargeImgDataset):
 
         # Maximum string length of an image path.
         max_path_len = len(max(self._torch_ds_train.samples +
-            ([] if num_val == 0 else self._torch_ds_val.samples) +
-            self._torch_ds_test.samples, key=lambda t : len(t[0]))[0])
+                               ([] if num_val == 0 else self._torch_ds_val.samples) +
+                               self._torch_ds_test.samples, key=lambda t: len(t[0]))[0])
 
         self._data['classification'] = True
         self._data['sequence'] = False
@@ -206,10 +209,10 @@ class ILSVRC2012Data(LargeImgDataset):
         self._data['out_shape'] = [1000 if use_one_hot else 1]
 
         self._data['in_data'] = np.chararray([num_samples, 1],
-            itemsize=max_path_len, unicode=True)
+                                             itemsize=max_path_len, unicode=True)
         for i, (img_path, _) in enumerate(self._torch_ds_train.samples +
-                ([] if num_val == 0 else self._torch_ds_val.samples) +
-                self._torch_ds_test.samples):
+                                          ([] if num_val == 0 else self._torch_ds_val.samples) +
+                                          self._torch_ds_test.samples):
             self._data['in_data'][i, :] = img_path
 
         labels = np.array(self._torch_ds_train.targets +
@@ -230,7 +233,7 @@ class ILSVRC2012Data(LargeImgDataset):
               % (num_train, num_val, num_test) + 'samples.')
 
         end = time.time()
-        print('Elapsed time to read dataset: %f sec' % (end-start))
+        print('Elapsed time to read dataset: %f sec' % (end - start))
 
     def tf_input_map(self, mode='inference'):
         """Not impemented."""
@@ -262,25 +265,25 @@ class ILSVRC2012Data(LargeImgDataset):
         imid2words = dict()
 
         for i in range(meta.size):
-            imid = meta[i][0][0][0][0] # ILSVRC2012_ID
-            wnid = meta[i][0][1][0] # WNID
-            words = meta[i][0][2][0] # words
+            imid = meta[i][0][0][0][0]  # ILSVRC2012_ID
+            wnid = meta[i][0][1][0]  # WNID
+            words = meta[i][0][2][0]  # words
             num_children = meta[i][0][4][0][0]
             if num_children != 0:
                 # We don't care about non-leaf nodes.
-                assert(imid >= 1000)
+                assert (imid >= 1000)
                 continue
-            assert(imid >= 1 and imid <= 1000)
+            assert (imid >= 1 and imid <= 1000)
 
             # NOTE internally, we subtract 1 from all ILSVRC2012_ID to have
             # labels between 0 and 999.
-            imid2wnid[imid-1] = wnid
-            imid2words[imid-1] = words
+            imid2wnid[imid - 1] = wnid
+            imid2words[imid - 1] = words
 
-        assert(len(imid2wnid.keys()) == 1000)
+        assert (len(imid2wnid.keys()) == 1000)
 
         wnid2imid = {v: k for k, v in imid2wnid.items()}
-        assert(len(wnid2imid.keys()) == 1000)
+        assert (len(wnid2imid.keys()) == 1000)
 
         self._imid_to_wnid = imid2wnid
         self._wnid_to_imid = wnid2imid
@@ -326,29 +329,29 @@ class ILSVRC2012Data(LargeImgDataset):
         ### Translate targets to ILSVRC2012_ID labels.
         wnid2lbl = ds_train.class_to_idx
         # Sanity check.
-        assert(len(wnid2lbl.keys()) == len(ds_test.class_to_idx.keys()))
+        assert (len(wnid2lbl.keys()) == len(ds_test.class_to_idx.keys()))
         for k in wnid2lbl.keys():
-            assert(k in ds_test.class_to_idx.keys())
-            assert(wnid2lbl[k] == ds_test.class_to_idx[k])
+            assert (k in ds_test.class_to_idx.keys())
+            assert (wnid2lbl[k] == ds_test.class_to_idx[k])
 
         lbl2wnid = {v: k for k, v in wnid2lbl.items()}
 
         for ds_obj in [ds_train, ds_test]:
             for s in range(len(ds_obj.samples)):
                 img_path, lbl = ds_obj.samples[s]
-                assert(ds_obj.targets[s] == lbl)
+                assert (ds_obj.targets[s] == lbl)
 
                 wnid = lbl2wnid[lbl]
                 # We assume a folder structure where images are stored under
                 # their corresponding WNID.
-                assert(wnid in img_path)
+                assert (wnid in img_path)
 
                 imid = self._wnid_to_imid[wnid]
 
                 ds_obj.samples[s] = (img_path, imid)
                 ds_obj.targets[s] = imid
 
-                assert(ds_obj.imgs[s][1] == imid)
+                assert (ds_obj.imgs[s][1] == imid)
 
             # The mapping from class name (WNID) to label has changed!
             ds_obj.class_to_idx = self._wnid_to_imid
@@ -362,10 +365,10 @@ class ILSVRC2012Data(LargeImgDataset):
 
             ds_val = deepcopy(ds_train)
             ds_val.transform = test_transform
-            assert(ds_val.target_transform is None)
+            assert (ds_val.target_transform is None)
 
             num_classes = len(self._imid_to_wnid.keys())
-            assert(num_classes == 1000)
+            assert (num_classes == 1000)
             val_counts = np.zeros(num_classes, dtype=np.int)
 
             ds_train.samples = []
@@ -374,9 +377,9 @@ class ILSVRC2012Data(LargeImgDataset):
             ds_val.imgs = ds_val.samples
 
             for img_path, img_lbl in orig_samples:
-                if val_counts[img_lbl] >= num_val_per_class: # train sample
+                if val_counts[img_lbl] >= num_val_per_class:  # train sample
                     ds_train.samples.append((img_path, img_lbl))
-                else: # validation sample
+                else:  # validation sample
                     val_counts[img_lbl] += 1
                     ds_val.samples.append((img_path, img_lbl))
 
@@ -384,13 +387,13 @@ class ILSVRC2012Data(LargeImgDataset):
             ds_val.targets = [s[1] for s in ds_val.samples]
 
             for ds_obj in [ds_train, ds_val]:
-                assert(len(ds_obj.samples) == len(ds_obj.imgs) and \
-                       len(ds_obj.samples) == len(ds_obj.targets))
+                assert (len(ds_obj.samples) == len(ds_obj.imgs) and \
+                        len(ds_obj.samples) == len(ds_obj.targets))
 
         self._torch_ds_train = ds_train
         self._torch_ds_test = ds_test
         self._torch_ds_val = ds_val
-        
+
         self._wnid_to_clbl = wnid2lbl
 
     def to_common_labels(self, outputs):
@@ -417,14 +420,14 @@ class ILSVRC2012Data(LargeImgDataset):
             is_np = True
             outputs = np.copy(outputs)
         else:
-            assert(isinstance(outputs, torch.Tensor))
+            assert (isinstance(outputs, torch.Tensor))
             outputs = outputs.clone()
 
         is_1_hot = False
         if len(outputs.shape) == 2 and outputs.shape[1] == self.num_classes:
             if not is_np:
                 raise NotImplementedError('Method can\'t deal with 1-hot ' +
-                    'encodings provided as Torch tensors yet!')
+                                          'encodings provided as Torch tensors yet!')
             is_1_hot = True
             outputs = self._to_one_hot(outputs, reverse=True)
 
@@ -484,7 +487,7 @@ class ILSVRC2012Data(LargeImgDataset):
         if outputs is None:
             ax.set_title("ILSVRC2012 Sample")
         else:
-            assert(np.size(outputs) == 1)
+            assert (np.size(outputs) == 1)
             label = np.asscalar(outputs)
             label_name = self._imid_to_words[label]
 
@@ -511,7 +514,6 @@ class ILSVRC2012Data(LargeImgDataset):
         ax.imshow(np.squeeze(np.reshape(img, self.in_shape)))
         fig.add_subplot(ax)
 
+
 if __name__ == '__main__':
     pass
-
-

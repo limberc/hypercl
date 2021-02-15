@@ -32,16 +32,18 @@ Information about the dataset can be retrieved from:
     https://www.cs.toronto.edu/~kriz/cifar.html
 """
 
-import os
-import numpy as np
-import time
 import _pickle as pickle
-import urllib.request
+import os
 import tarfile
-import matplotlib.pyplot as plt
+import time
+import urllib.request
 from warnings import warn
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from data.dataset import Dataset
+
 
 class CIFAR10Data(Dataset):
     """An instance of the class shall represent the CIFAR-10 dataset.
@@ -69,7 +71,7 @@ class CIFAR10Data(Dataset):
     _DOWNLOAD_FILE = 'cifar-10-python.tar.gz'
     _EXTRACTED_FOLDER = 'cifar-10-batches-py'
 
-    _TRAIN_BATCH_FNS = ['data_batch_%d' % i for i in range(1,6)]
+    _TRAIN_BATCH_FNS = ['data_batch_%d' % i for i in range(1, 6)]
     _TEST_BATCH_FN = 'test_batch'
     _META_DATA_FN = 'batches.meta'
 
@@ -89,7 +91,7 @@ class CIFAR10Data(Dataset):
             print('Creating directory "%s" ...' % (data_path))
             os.makedirs(data_path)
 
-        extracted_data_dir = os.path.join(data_path, 
+        extracted_data_dir = os.path.join(data_path,
                                           CIFAR10Data._EXTRACTED_FOLDER)
 
         # If data has been processed before.
@@ -109,16 +111,14 @@ class CIFAR10Data(Dataset):
 
                     self._data['is_one_hot'] = use_one_hot
                     self._data['out_data'] = self._to_one_hot(
-                            self._data['out_data'], reverse=reverse)
+                        self._data['out_data'], reverse=reverse)
                     self._data['out_shape'] = [self._data['out_data'].shape[1]]
 
                 if self.num_val_samples != validation_size:
                     build_from_scratch = True
 
-
         if build_from_scratch:
             archive_fn = os.path.join(data_path, CIFAR10Data._DOWNLOAD_FILE)
-
 
             if not os.path.exists(extracted_data_dir):
                 print('Downloading dataset ...')
@@ -133,21 +133,21 @@ class CIFAR10Data(Dataset):
 
                 os.remove(archive_fn)
 
-            train_batch_fns = list(map(lambda p : os.path.join(
+            train_batch_fns = list(map(lambda p: os.path.join(
                 extracted_data_dir, p), CIFAR10Data._TRAIN_BATCH_FNS))
-            test_batch_fn = os.path.join(extracted_data_dir, 
+            test_batch_fn = os.path.join(extracted_data_dir,
                                          CIFAR10Data._TEST_BATCH_FN)
-            meta_fn = os.path.join(extracted_data_dir, 
+            meta_fn = os.path.join(extracted_data_dir,
                                    CIFAR10Data._META_DATA_FN)
 
-            assert(all(map(os.path.exists, train_batch_fns)) and
-                   os.path.exists(test_batch_fn) and os.path.exists(meta_fn))
+            assert (all(map(os.path.exists, train_batch_fns)) and
+                    os.path.exists(test_batch_fn) and os.path.exists(meta_fn))
 
             self._data['classification'] = True
             self._data['sequence'] = False
             self._data['num_classes'] = 10
             self._data['is_one_hot'] = use_one_hot
-            
+
             self._data['in_shape'] = [32, 32, 3]
             self._data['out_shape'] = [10 if use_one_hot else 1]
 
@@ -159,7 +159,7 @@ class CIFAR10Data(Dataset):
             # As the time advantage are minimal compared to the huge storage
             # requirements, we don't safe the data as pickle file.
             ## Save read dataset to allow faster reading in future.
-            #with open(dump_fn, 'wb') as f:
+            # with open(dump_fn, 'wb') as f:
             #    pickle.dump(self._data, f)
 
         # Initialize PyTorch data augmentation.
@@ -170,7 +170,7 @@ class CIFAR10Data(Dataset):
                 CIFAR10Data.torch_input_transforms()
 
         end = time.time()
-        print('Elapsed time to read dataset: %f sec' % (end-start))
+        print('Elapsed time to read dataset: %f sec' % (end - start))
 
     def _read_meta(self, filename):
         """Read the meta data file.
@@ -188,7 +188,7 @@ class CIFAR10Data(Dataset):
         with open(filename, 'rb') as f:
             meta_data = pickle.load(f, encoding='UTF-8')
 
-        assert(meta_data['num_vis'] == 32 * 32 * 3)
+        assert (meta_data['num_vis'] == 32 * 32 * 3)
 
         self._data['cifar10'] = dict()
 
@@ -218,7 +218,7 @@ class CIFAR10Data(Dataset):
         # Note, that we ignore the two keys: "batch_label" and "filenames".
         test_labels = np.array(test_batch['labels'.encode()])
         test_samples = test_batch['data'.encode()]
-        
+
         # Read training batches.
         for i, fn in enumerate(train_fns):
             with open(fn, 'rb') as f:
@@ -236,14 +236,14 @@ class CIFAR10Data(Dataset):
                                                axis=0)
 
         if validation_size > 0:
-            assert(validation_size < train_labels.shape[0])
+            assert (validation_size < train_labels.shape[0])
             val_inds = np.arange(validation_size)
             train_inds = np.arange(validation_size, train_labels.size)
 
         else:
             train_inds = np.arange(train_labels.size)
 
-        test_inds = np.arange(train_labels.size, 
+        test_inds = np.arange(train_labels.size,
                               train_labels.size + test_labels.size)
 
         labels = np.concatenate([train_labels, test_labels])
@@ -281,7 +281,7 @@ class CIFAR10Data(Dataset):
         """
         return index % 10000 + 1
 
-    def plot_sample(self, image, label=None, figsize = 1.5, interactive=False,
+    def plot_sample(self, image, label=None, figsize=1.5, interactive=False,
                     file_name=None):
         """Plot a single CIFAR-10 sample.
 
@@ -305,7 +305,7 @@ class CIFAR10Data(Dataset):
         """
         warn('Please use method "plot_samples" instead.', DeprecationWarning)
 
-        plt.figure(figsize = (figsize, figsize))
+        plt.figure(figsize=(figsize, figsize))
 
         if label is None:
             plt.title("CIFAR-10 Sample")
@@ -356,7 +356,7 @@ class CIFAR10Data(Dataset):
 
         else:
             return Dataset.input_to_torch_tensor(self, x, device,
-                mode=mode, force_no_preprocessing=force_no_preprocessing)
+                                                 mode=mode, force_no_preprocessing=force_no_preprocessing)
 
     def _plot_sample(self, fig, inner_grid, num_inner_plots, ind, inputs,
                      outputs=None, predictions=None):
@@ -368,7 +368,7 @@ class CIFAR10Data(Dataset):
         if outputs is None:
             ax.set_title("CIFAR-10 Sample")
         else:
-            assert(np.size(outputs) == 1)
+            assert (np.size(outputs) == 1)
             label = np.asscalar(outputs)
             label_name = self._data['cifar10']['label_names'][label]
 
@@ -399,7 +399,7 @@ class CIFAR10Data(Dataset):
             if outputs is not None:
                 bars[int(label)].set_color('r')
             fig.add_subplot(ax)
-        
+
     def _plot_config(self, inputs, outputs=None, predictions=None):
         """Re-Implementation of method
         :meth:`data.dataset.Dataset._plot_config`.
@@ -409,13 +409,13 @@ class CIFAR10Data(Dataset):
         """
         plot_configs = super()._plot_config(inputs, outputs=outputs,
                                             predictions=predictions)
-        
+
         if predictions is not None and \
                 np.shape(predictions)[1] == self.num_classes:
             plot_configs['outer_hspace'] = 0.6
             plot_configs['inner_hspace'] = 0.4
             plot_configs['num_inner_rows'] = 2
-            #plot_configs['num_inner_cols'] = 1
+            # plot_configs['num_inner_cols'] = 1
             plot_configs['num_inner_plots'] = 2
 
         return plot_configs
@@ -458,7 +458,7 @@ class CIFAR10Data(Dataset):
         train_transform = transforms.Compose([
             transforms.ToPILImage('RGB'),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomCrop(size=[32,32], padding=4),
+            transforms.RandomCrop(size=[32, 32], padding=4),
             transforms.ToTensor(),
             normalize,
         ])
@@ -487,31 +487,30 @@ class CIFAR10Data(Dataset):
         """
         from torch import stack
 
-        #x = torch.from_numpy(x).float()
-        #x = x.view([-1, 32, 32, 3])
-        #x = x.permute(0, 3, 1, 2)
-        #x = torch.stack([transform(_x) for _x in x])
-        #return x.to(device)
+        # x = torch.from_numpy(x).float()
+        # x = x.view([-1, 32, 32, 3])
+        # x = x.permute(0, 3, 1, 2)
+        # x = torch.stack([transform(_x) for _x in x])
+        # return x.to(device)
 
-        assert(len(x.shape) == 2) # batch size plus flattened image.
+        assert (len(x.shape) == 2)  # batch size plus flattened image.
 
         # Transform the numpy data into a representation as expected by the
         # ToPILImage transformation.
         x = (x * 255.0).astype('uint8')
         x = x.reshape(-1, 32, 32, 3)
 
-        x = stack([transform(x[i,...]) for i in range(x.shape[0])]).to(device)
+        x = stack([transform(x[i, ...]) for i in range(x.shape[0])]).to(device)
 
         # Transform tensor back to numpy shape.
         # FIXME This is a horrible solution, but at least we ensure that the
         # user gets a tensor in the same shape as always and does not have to
         # deal with cases.
         x = x.permute(0, 2, 3, 1)
-        x = x.contiguous().view(-1, 3072) # 3072 = 32 * 32 * 3
+        x = x.contiguous().view(-1, 3072)  # 3072 = 32 * 32 * 3
 
         return x
 
+
 if __name__ == '__main__':
     pass
-
-

@@ -27,15 +27,15 @@ Note, if using regression tasks with overlapping input domain, you should use
 a multi-head setup, otherwise the output can't be meaningful!
 """
 # Do not delete the following import for all executable scripts!
-import __init__ # pylint: disable=unused-import
 
-import torch.optim as optim
-import torch.nn.functional as F
 import numpy as np
+import torch.nn.functional as F
+import torch.optim as optim
 
-from toy_example import train_utils
 import toy_example.train as train_cl
 import utils.ewc_regularizer as ewc
+from toy_example import train_utils
+
 
 def train_ewc(task_id, data, mnet, device, config, writer):
     """Train the main network in a continual learning setup using the EWC
@@ -53,7 +53,7 @@ def train_ewc(task_id, data, mnet, device, config, writer):
     allowed_outputs = None
     if config.multi_head:
         n_y = data.out_shape[0]
-        allowed_outputs = list(range(task_id*n_y, (task_id+1)*n_y))
+        allowed_outputs = list(range(task_id * n_y, (task_id + 1) * n_y))
 
     optimizer = optim.Adam(mnet.parameters(), lr=config.lr_hyper)
 
@@ -87,7 +87,7 @@ def train_ewc(task_id, data, mnet, device, config, writer):
 
         if task_id > 0 and config.beta > 0:
             loss_reg = ewc.ewc_regularizer(task_id, mnet.weights, mnet,
-                online=config.online_ewc, gamma=config.gamma)
+                                           online=config.online_ewc, gamma=config.gamma)
 
         loss = loss_task + config.beta * loss_reg
         loss.backward()
@@ -101,10 +101,11 @@ def train_ewc(task_id, data, mnet, device, config, writer):
 
     ## Estimate diagonal Fisher elements.
     ewc.compute_fisher(task_id, data, mnet.weights, device, mnet,
-        empirical_fisher=True, online=config.online_ewc, gamma=config.gamma,
-        n_max=config.n_fisher, regression=True, allowed_outputs=allowed_outputs)
+                       empirical_fisher=True, online=config.online_ewc, gamma=config.gamma,
+                       n_max=config.n_fisher, regression=True, allowed_outputs=allowed_outputs)
 
     print('Training network ... Done')
+
 
 def run():
     """Run the script
@@ -122,25 +123,25 @@ def run():
 
     ### Generate networks.
     mnet, _, _ = train_utils._generate_networks(config, dhandlers,
-        device, create_hnet=False, create_rnet=False)
+                                                device, create_hnet=False, create_rnet=False)
 
     ### Train on tasks sequentially.
     immediate_mse = np.ones(num_tasks) * -1.
 
     for i in range(num_tasks):
-        print('### Training on task %d ###' % (i+1))
+        print('### Training on task %d ###' % (i + 1))
         data = dhandlers[i]
         # Train the network.
         train_ewc(i, data, mnet, device, config, writer)
 
         ### Test networks.
         current_mse, immediate_mse, _ = train_cl.test( \
-            dhandlers[:(i+1)], mnet, None, device, config, writer, rnet=None,
+            dhandlers[:(i + 1)], mnet, None, device, config, writer, rnet=None,
             immediate_mse=immediate_mse)
 
         if config.train_from_scratch:
             mnet, _, _ = train_utils._generate_networks(config, dhandlers,
-                device, create_hnet=False, create_rnet=False)
+                                                        device, create_hnet=False, create_rnet=False)
 
     print('Immediate MSE values after training each task: %s' % \
           np.array2string(immediate_mse, precision=5, separator=','))
@@ -155,8 +156,6 @@ def run():
 
     return current_mse, immediate_mse
 
+
 if __name__ == '__main__':
     _, _ = run()
-
-
-

@@ -34,8 +34,9 @@ import torch
 from torch.nn import functional as F
 
 from mnets.mnet_interface import MainNetInterface
-from toy_example.main_model import MainNetwork
 from toy_example.hyper_model import HyperNetwork
+from toy_example.main_model import MainNetwork
+
 
 def compute_fisher(task_id, data, params, device, mnet, hnet=None,
                    empirical_fisher=True, online=False, gamma=1., n_max=-1,
@@ -237,11 +238,11 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
     # the deprecated class `MainNetwork` as well for now. However, this class
     # doesn't allow us to check for compatibility (e.g., ensuring that network
     # output is linear).
-    assert(isinstance(mnet, MainNetInterface) or \
-           isinstance(mnet, MainNetwork))
-    assert(hnet is None or isinstance(hnet, HyperNetwork))
+    assert (isinstance(mnet, MainNetInterface) or \
+            isinstance(mnet, MainNetwork))
+    assert (hnet is None or isinstance(hnet, HyperNetwork))
     if isinstance(mnet, MainNetInterface):
-        assert(mnet.has_linear_out)
+        assert (mnet.has_linear_out)
 
     # FIXME The above assertions are not necessary with the new network
     # interfaces, that clearly specify how to use the `forward` methods and how
@@ -250,17 +251,17 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
     # I just wanna point out that we may wanna provide downwards compatibility
     # as follows as long as not all network types are migrated to the new
     # interface.
-    #if not hasattr(mnet, 'has_linear_out'):
+    # if not hasattr(mnet, 'has_linear_out'):
     #    pass # TODO new interface not yet available for network type
-    #else:
+    # else:
     #    # Knowing the type of output non-linearity gives us a clear way of
     #    # computing the loss for classification tasks.
     #    assert(mnet.has_linear_out)
 
-    assert(hnet is None or task_id is not None)
-    assert(regression is False or empirical_fisher)
-    assert(not online or (gamma >= 0. and gamma <= 1.))
-    assert(n_max is -1 or n_max > 0)
+    assert (hnet is None or task_id is not None)
+    assert (regression is False or empirical_fisher)
+    assert (not online or (gamma >= 0. and gamma <= 1.))
+    assert (n_max is -1 or n_max > 0)
 
     if time_series and regression:
         raise NotImplementedError('Computing the Fisher for a recurrent ' +
@@ -280,7 +281,7 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
     for p in params:
         fisher.append(torch.zeros_like(p))
 
-        assert(p.requires_grad) # Otherwise, we can't compute the Fisher.
+        assert (p.requires_grad)  # Otherwise, we can't compute the Fisher.
 
     # Ensure, that we go through all training samples (note, that training
     # samples are always randomly shuffled when using "next_train_batch", but
@@ -309,9 +310,9 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
                 Y = custom_forward(mnet, hnet, task_id, params, X)
 
         if not time_series:
-            assert(len(Y.shape) == 2)
+            assert (len(Y.shape) == 2)
         else:
-            assert(len(Y.shape) == 3)
+            assert (len(Y.shape) == 3)
 
         if allowed_outputs is not None:
             if not time_series:
@@ -337,16 +338,16 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
             # that we can compute the log probabilities by applying the log-
             # softmax to these outputs.
 
-            assert(data.classification and len(data.out_shape) == 1)
+            assert (data.classification and len(data.out_shape) == 1)
             if allowed_outputs is not None:
-                assert(len(allowed_outputs) == data.num_classes)
-                assert(Y.shape[2 if time_series else 1] == data.num_classes)
+                assert (len(allowed_outputs) == data.num_classes)
+                assert (Y.shape[2 if time_series else 1] == data.num_classes)
 
             # Targets might be labels or one-hot encodings.
             if data.is_one_hot:
-                assert(data.out_shape[0] == data.num_classes)
+                assert (data.out_shape[0] == data.num_classes)
                 if time_series:
-                    assert(len(T.shape) == 3 and T.shape[2] == data.num_classes)
+                    assert (len(T.shape) == 3 and T.shape[2] == data.num_classes)
                     T = torch.argmax(T, 2)
                 else:
                     # Note, this function processes always one sample at a time
@@ -361,14 +362,14 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
                     nll = F.nll_loss(F.log_softmax(Y, dim=1),
                                      torch.tensor([T]).to(device))
                 else:
-                    ll = F.log_softmax(Y, dim=2) # log likelihood for all labels
+                    ll = F.log_softmax(Y, dim=2)  # log likelihood for all labels
                     # We need to swap dimenstions from [S, N, F] to [S, F, N].
                     # See documentation of method `nll_loss`.
                     ll = ll.permute(0, 2, 1)
                     nll = F.nll_loss(ll, T, reduction='none')
                     # Mean across batch dimension, but sum across time-series
                     # dimension.
-                    assert(len(nll.shape) == 2)
+                    assert (len(nll.shape) == 2)
                     nll = nll.mean(dim=1).sum()
             else:
                 raise NotImplementedError('Only empirical Fisher is ' +
@@ -386,7 +387,7 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
         # This version would not require use to call zero_grad and hence, we
         # wouldn't fiddle with internal variables, but it would require us to
         # loop over tensors and retain the graph in between.
-        #for p in params:
+        # for p in params:
         #    g = torch.autograd.grad(nll, p, grad_outputs=None,
         #                retain_graph=True, create_graph=False,
         #                only_inputs=True)[0]
@@ -401,7 +402,7 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
         net = hnet
     for i, p in enumerate(params):
         buff_w_name, buff_f_name = _ewc_buffer_names(task_id, i, online)
-        
+
         # We use registered buffers rather than class members to ensure that
         # these variables appear in the state_dict and are thus written into
         # checkpoints.
@@ -420,6 +421,7 @@ def compute_fisher(task_id, data, params, device, mnet, hnet=None,
     mnet.train(mode=mnet_mode)
     if hnet is not None:
         hnet.train(mode=hnet_mode)
+
 
 def ewc_regularizer(task_id, params, mnet, hnet=None,
                     online=False, gamma=1.):
@@ -447,7 +449,7 @@ def ewc_regularizer(task_id, params, mnet, hnet=None,
     Returns:
         EWC regularizer.
     """
-    assert(task_id > 0)
+    assert (task_id > 0)
 
     net = mnet
     if hnet is not None:
@@ -471,8 +473,9 @@ def ewc_regularizer(task_id, params, mnet, hnet=None,
 
     # Note, the loss proposed in the original paper is not normalized by the
     # number of tasks
-    #return ewc_reg / num_prev_tasks / 2.
+    # return ewc_reg / num_prev_tasks / 2.
     return ewc_reg / 2.
+
 
 def _ewc_buffer_names(task_id, param_id, online):
     """The names of the buffers used to store EWC variables.
@@ -492,8 +495,9 @@ def _ewc_buffer_names(task_id, param_id, online):
 
     weight_name = 'ewc_prev{}_weights_{}'.format(task_ident, param_id)
     fisher_name = 'ewc_fisher_estimate{}_weights_{}'.format(task_ident,
-                                      param_id)
+                                                            param_id)
     return weight_name, fisher_name
+
 
 def context_mod_forward(mod_weights=None):
     """Create a custom forward function for function :func:`compute_fisher`.
@@ -519,6 +523,7 @@ def context_mod_forward(mod_weights=None):
     Returns:
         A function handle.
     """
+
     def hnet_forward(mnet, hnet, task_id, params, X):
         mod_weights = hnet.forward(task_id)
         weights = {
@@ -540,6 +545,7 @@ def context_mod_forward(mod_weights=None):
         return hnet_forward
     else:
         return mnet_only_forward
+
 
 def cognet_mse_nll(no_fix_unit_amplification=False):
     r"""Create a custom NLL function for function
@@ -618,9 +624,10 @@ def cognet_mse_nll(no_fix_unit_amplification=False):
             the fixation unit is not amplified (by a factor of 2) as described
             above. Instead, fixation and ring units are treated equally.
     """
+
     def custom_nll(Y, T, data, allowed_outputs, empirical_fisher):
         # We expect targets to be given as 1-hot encodings.
-        assert(np.all(np.equal(list(Y.shape), list(T.shape))))
+        assert (np.all(np.equal(list(Y.shape), list(T.shape))))
 
         # Fixation period is defined by timesteps having label 8.
         labels = torch.argmax(T, 2)
@@ -641,16 +648,15 @@ def cognet_mse_nll(no_fix_unit_amplification=False):
 
             mask[labels != 8] = 5
             mask[0:10, :, :] = 0
-            
+
             mask[:, :, 8] = 2 * mask[:, :, 8]
 
-        nll = (mask * (Y - T)**2).sum()
+        nll = (mask * (Y - T) ** 2).sum()
 
         return nll
 
     return custom_nll
 
+
 if __name__ == '__main__':
     pass
-
-

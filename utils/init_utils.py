@@ -28,8 +28,10 @@ useful for initialization of weights. The functions are somewhat complementary
 to what is already provided in the PyTorch module :mod:`torch.nn.init`.
 """
 import math
+
 import numpy as np
 import torch
+
 
 def xavier_fan_in_(tensor):
     """Initialize the given weight tensor with Xavier fan-in init.
@@ -49,6 +51,7 @@ def xavier_fan_in_(tensor):
 
     torch.nn.init._no_grad_uniform_(tensor, -a, a)
 
+
 def calc_fan_in_and_out(shapes):
     """Calculate fan-in and fan-out.
 
@@ -65,7 +68,7 @@ def calc_fan_in_and_out(shapes):
         - **fan_out**
     """
     assert len(shapes) > 1
-    
+
     fan_in = shapes[1]
     fan_out = shapes[0]
 
@@ -79,7 +82,6 @@ def calc_fan_in_and_out(shapes):
 
     return fan_in, fan_out
 
+
 if __name__ == '__main__':
     pass
-
-

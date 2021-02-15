@@ -30,14 +30,15 @@ that was used in
     https://arxiv.org/abs/1703.04200
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 from mnets.classifier_interface import Classifier
 from mnets.mnet_interface import MainNetInterface
 from utils.misc import init_params
+
 
 class ZenkeNet(Classifier):
     """The network consists of four convolutional layers followed by two fully-
@@ -85,25 +86,25 @@ class ZenkeNet(Classifier):
             .. note::
                 For the FC layer, the dropout rate is doubled.
     """
-    _architectures = { 
-        'cifar': [[32,3,3,3],[32],[32,32,3,3],[32],[64,32,3,3],[64],
-                  [64,64,3,3],[64],[512, 2304],[512],[10,512],[10]]
-        }
+    _architectures = {
+        'cifar': [[32, 3, 3, 3], [32], [32, 32, 3, 3], [32], [64, 32, 3, 3], [64],
+                  [64, 64, 3, 3], [64], [512, 2304], [512], [10, 512], [10]]
+    }
 
     def __init__(self, in_shape=[32, 32, 3],
                  num_classes=10, verbose=True, arch='cifar', no_weights=False,
                  init_weights=None, dropout_rate=0.25):
         super(ZenkeNet, self).__init__(num_classes, verbose)
 
-        assert(in_shape[0] == 32 and in_shape[1] == 32)
+        assert (in_shape[0] == 32 and in_shape[1] == 32)
         self._in_shape = in_shape
 
-        assert(arch in ZenkeNet._architectures.keys())
+        assert (arch in ZenkeNet._architectures.keys())
         self._param_shapes = ZenkeNet._architectures[arch]
         self._param_shapes[-2][0] = num_classes
         self._param_shapes[-1][0] = num_classes
 
-        assert(init_weights is None or no_weights is False)
+        assert (init_weights is None or no_weights is False)
         self._no_weights = no_weights
 
         self._use_dropout = dropout_rate != -1
@@ -152,14 +153,14 @@ class ZenkeNet(Classifier):
             if i % 2 == 0:
                 self._layer_weight_tensors.append(self._weights[i])
             else:
-                assert(len(dims) == 1)
+                assert (len(dims) == 1)
                 self._layer_bias_vectors.append(self._weights[i])
 
         if init_weights is not None:
-            assert(len(init_weights) == len(self._param_shapes))
+            assert (len(init_weights) == len(self._param_shapes))
             for i in range(len(init_weights)):
-                assert(np.all(np.equal(list(init_weights[i].shape),
-                                       list(self._weights[i].shape))))
+                assert (np.all(np.equal(list(init_weights[i].shape),
+                                        list(self._weights[i].shape))))
                 self._weights[i].data = init_weights[i]
         else:
             for i in range(len(self._layer_weight_tensors)):
@@ -202,9 +203,9 @@ class ZenkeNet(Classifier):
             weights = self._weights
         else:
             shapes = self.param_shapes
-            assert(len(weights) == len(shapes))
+            assert (len(weights) == len(shapes))
             for i, s in enumerate(shapes):
-                assert(np.all(np.equal(s, list(weights[i].shape))))
+                assert (np.all(np.equal(s, list(weights[i].shape))))
 
         # Note, implementation aims to follow:
         #     https://git.io/fj8xP
@@ -212,18 +213,18 @@ class ZenkeNet(Classifier):
         # first block
         x = x.view(*([-1] + self._in_shape))
         x = x.permute(0, 3, 1, 2)
-        h = F.conv2d(x, weights[0], bias=weights[1], padding=1) # 'SAME'
+        h = F.conv2d(x, weights[0], bias=weights[1], padding=1)  # 'SAME'
         h = F.relu(h)
-        h = F.conv2d(h, weights[2], bias=weights[3], padding=0) # 'VALID'
+        h = F.conv2d(h, weights[2], bias=weights[3], padding=0)  # 'VALID'
         h = F.max_pool2d(F.relu(h), 2)
         if self._use_dropout:
             h = self._drop_conv(h)
-        
+
         # second block
-        h = F.conv2d(h, weights[4], bias=weights[5], padding=1) # 'SAME'
+        h = F.conv2d(h, weights[4], bias=weights[5], padding=1)  # 'SAME'
         h = F.relu(h)
-        h = F.conv2d(h, weights[6], bias=weights[7], padding=0) # 'VALID'
-        h = F.max_pool2d(F.relu(h), 2) 
+        h = F.conv2d(h, weights[6], bias=weights[7], padding=0)  # 'VALID'
+        h = F.max_pool2d(F.relu(h), 2)
         if self._use_dropout:
             h = self._drop_conv(h)
 

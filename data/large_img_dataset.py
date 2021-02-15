@@ -48,12 +48,14 @@ should adapt PyTorch its data processing utilities (consisting of
 in combination with class attributes such as
 :attr:`data.large_img_dataset.LargeImgDataset.torch_train`.
 """
-import numpy as np
 import os
-#import matplotlib.image as mpimg
+
+import numpy as np
+# import matplotlib.image as mpimg
 from PIL import Image
 
 from data.dataset import Dataset
+
 
 class LargeImgDataset(Dataset):
     """A general dataset template for datasets with images as inputs, that are
@@ -85,6 +87,7 @@ class LargeImgDataset(Dataset):
         png_format (bool): The images are typically assumed to be jpeg encoded.
             You may change this to png enocded images.
     """
+
     def __init__(self, imgs_path, png_format=False):
         super().__init__()
 
@@ -174,10 +177,10 @@ class LargeImgDataset(Dataset):
         ret = np.empty([inputs.shape[0], np.prod(self.in_shape)], np.float32)
 
         for i in range(inputs.shape[0]):
-            fn = os.path.join(self.imgs_path, 
+            fn = os.path.join(self.imgs_path,
                               str(inputs[i, np.newaxis].squeeze()))
             img = Image.open(fn)
-            #img = mpimg.imread(fn)
+            # img = mpimg.imread(fn)
             if img.mode != 'RGB':
                 img = img.convert('RGB')
             img = img.resize(self.in_shape[:2], Image.BILINEAR)
@@ -210,7 +213,7 @@ class LargeImgDataset(Dataset):
         import tensorflow as tf
 
         base_path = os.path.join(self.imgs_path, '')
-        
+
         def load_inputs(inputs):
             filename = tf.add(base_path, tf.squeeze(inputs))
             image_string = tf.read_file(filename)
@@ -239,10 +242,9 @@ class LargeImgDataset(Dataset):
             - :attr:`torch_val`
         """
         raise NotImplementedError('Use attributes "torch_train", "torch_val" ' +
-            'and "torch_test" instead. Please refer to the class ' +
-            'documentation.')
+                                  'and "torch_test" instead. Please refer to the class ' +
+                                  'documentation.')
+
 
 if __name__ == '__main__':
     pass
-
-

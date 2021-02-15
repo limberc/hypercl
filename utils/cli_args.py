@@ -40,6 +40,7 @@ call the method.
 from datetime import datetime
 from warnings import warn
 
+
 def hypernet_args(parser, dhyper_chunks=11010, dhnet_arch='50,50,50',
                   dtemb_size=32, demb_size=32, dhnet_act='relu', prefix=None,
                   pf_name=None):
@@ -76,7 +77,7 @@ def hypernet_args(parser, dhyper_chunks=11010, dhnet_arch='50,50,50',
     Returns:
         The created argument group, in case more options should be added.
     """
-    assert(prefix is None or pf_name is not None)
+    assert (prefix is None or pf_name is not None)
 
     heading = 'Hypernet options'
 
@@ -114,14 +115,14 @@ def hypernet_args(parser, dhyper_chunks=11010, dhnet_arch='50,50,50',
                              '%shypernetwork. This option is discarded ' % n +
                              'when using SAHyperNetwork class. Default: ' +
                              '%(default)s.')
-                             ### We decided to discard remaining weights rather
-                             ### than generating them by a seperate network.
-                             #'Note, this option ' +
-                             #'also determines the architecture of the ' +
-                             #'"remaining weight generator" (see constructor ' +
-                             #'argument "rem_layers" of class SAHyperNetwork ' +
-                             #'for details). The option does not apply for a ' +
-                             #'full hypernetwork!')
+    ### We decided to discard remaining weights rather
+    ### than generating them by a seperate network.
+    # 'Note, this option ' +
+    # 'also determines the architecture of the ' +
+    # '"remaining weight generator" (see constructor ' +
+    # 'argument "rem_layers" of class SAHyperNetwork ' +
+    # 'for details). The option does not apply for a ' +
+    # 'full hypernetwork!')
     agroup.add_argument('--%shnet_act' % p, type=str, default=dhnet_act,
                         help='Activation function used in the hypernetwork. ' +
                              'If "linear", no activation function is used. ' +
@@ -184,6 +185,7 @@ def hypernet_args(parser, dhyper_chunks=11010, dhnet_arch='50,50,50',
                              'class SAHyperNetwork for details. ' +
                              'Default: %(default)s.')
     return agroup
+
 
 # FIXME change default value of `allowed_nets` to `['mlp']` once users had
 # enough time to incorporate the deprecation warning.
@@ -264,13 +266,13 @@ def main_net_args(parser, allowed_nets=['fc'], dfc_arch='100,100',
     Returns:
         The created argument group, in case more options should be added.
     """
-    assert(prefix is None or pf_name is not None)
+    assert (prefix is None or pf_name is not None)
 
     # TODO Delete 'fc' from list.
     for nt in allowed_nets:
-        assert(nt in ['fc', 'mlp', 'resnet', 'zenke', 'bio_conv_net'])
+        assert (nt in ['fc', 'mlp', 'resnet', 'zenke', 'bio_conv_net'])
 
-    assert(not show_batchnorm or not show_no_batchnorm)
+    assert (not show_batchnorm or not show_no_batchnorm)
 
     # TODO 'fc' should be renamed to 'mlp'.
     if 'fc' in allowed_nets and len(allowed_nets) == 1:
@@ -326,16 +328,16 @@ def main_net_args(parser, allowed_nets=['fc'], dfc_arch='100,100',
     # to add them to the corresponding function `utils.misc.str_to_act` as well!
     if show_net_act:
         agroup.add_argument('--%snet_act' % p, type=str, default=dnet_act,
-                        help='Activation function used in the %s network.' % n +
-                             'If "linear", no activation function is used. ' +
-                             'Default: %(default)s.',
-                        choices=['linear', 'sigmoid', 'relu', 'elu'])
+                            help='Activation function used in the %s network.' % n +
+                                 'If "linear", no activation function is used. ' +
+                                 'Default: %(default)s.',
+                            choices=['linear', 'sigmoid', 'relu', 'elu'])
 
     if show_no_bias:
         agroup.add_argument('--%sno_bias' % p, action='store_true',
-                        help='No biases will be used in the %s network. ' % n +
-                             'Note, does not affect normalization (like ' +
-                             'batchnorm).')
+                            help='No biases will be used in the %s network. ' % n +
+                                 'Note, does not affect normalization (like ' +
+                                 'batchnorm).')
 
     if show_dropout_rate:
         agroup.add_argument('--%sdropout_rate' % p, type=float,
@@ -391,6 +393,7 @@ def main_net_args(parser, allowed_nets=['fc'], dfc_arch='100,100',
 
     return agroup
 
+
 def init_args(parser, custom_option=True):
     """This is a helper method of the method `parse_cmd_arguments` to add
     an argument group for options regarding network initialization.
@@ -443,6 +446,7 @@ def init_args(parser, custom_option=True):
                              'the std of their initialization. Default: ' +
                              '%(default)s.')
     return agroup
+
 
 def miscellaneous_args(parser, big_data=True, synthetic_data=False,
                        show_plots=False, no_cuda=False, dout_dir=None,
@@ -505,7 +509,7 @@ def miscellaneous_args(parser, big_data=True, synthetic_data=False,
                              'CuDNN algorithms are not deterministic by ' +
                              'default and results might not be reproducible ' +
                              'unless this option is activated. Note, that ' +
-                             'this may slow down training significantly!')  
+                             'this may slow down training significantly!')
     if show_publication_style:
         agroup.add_argument('--publication_style', action='store_true',
                             help='Whether plots should be publication-ready.')
@@ -516,12 +520,13 @@ def miscellaneous_args(parser, big_data=True, synthetic_data=False,
         agroup.add_argument('--data_random_seed', type=int, metavar='N',
                             default=42,
                             help='The data is randomly generated at every ' +
-                             'run. This seed ensures that the randomness ' +
-                             'during data generation is decoupled from the ' +
-                             'training randomness. Default: %(default)s.')
+                                 'run. This seed ensures that the randomness ' +
+                                 'during data generation is decoupled from the ' +
+                                 'training randomness. Default: %(default)s.')
     agroup.add_argument('--random_seed', type=int, metavar='N', default=42,
                         help='Random seed. Default: %(default)s.')
     return agroup
+
 
 def eval_args(parser, dval_iter=500, show_val_batch_size=False,
               dval_batch_size=256):
@@ -555,6 +560,7 @@ def eval_args(parser, dval_iter=500, show_val_batch_size=False,
                                  'Default: %(default)s.')
 
     return agroup
+
 
 def train_args(parser, show_lr=False, dlr=0.1, show_epochs=False, depochs=-1,
                dbatch_size=32, dn_iter=100001, show_use_adam=False,
@@ -637,8 +643,8 @@ def train_args(parser, show_lr=False, dlr=0.1, show_epochs=False, depochs=-1,
                             help='Use Adam rather than SGD optimizer.')
     if show_use_adam or show_adam_beta1:
         agroup.add_argument('--adam_beta1', type=float, default=dadam_beta1,
-                        help='The "beta1" parameter when using torch.optim.' +
-                             'Adam as optimizer. Default: %(default)s.')
+                            help='The "beta1" parameter when using torch.optim.' +
+                                 'Adam as optimizer. Default: %(default)s.')
     if show_use_rmsprop:
         agroup.add_argument('--use_rmsprop', action='store_true',
                             help='Use RMSprop rather than SGD optimizer.')
@@ -651,17 +657,18 @@ def train_args(parser, show_lr=False, dlr=0.1, show_epochs=False, depochs=-1,
 
     if show_clip_grad_value:
         agroup.add_argument('--clip_grad_value', type=float, default=-1,
-                        help='If not "-1", gradients will be clipped using ' +
-                             '"torch.nn.utils.clip_grad_value_". Default: ' +
-                             '%(default)s.')
+                            help='If not "-1", gradients will be clipped using ' +
+                                 '"torch.nn.utils.clip_grad_value_". Default: ' +
+                                 '%(default)s.')
 
     if show_clip_grad_norm:
         agroup.add_argument('--clip_grad_norm', type=float, default=-1,
-                        help='If not "-1", gradient norms will be clipped ' +
-                             'using "torch.nn.utils.clip_grad_norm_". ' +
-                             'Default: %(default)s.')
+                            help='If not "-1", gradient norms will be clipped ' +
+                                 'using "torch.nn.utils.clip_grad_norm_". ' +
+                                 'Default: %(default)s.')
 
     return agroup
+
 
 def cl_args(parser, show_beta=True, dbeta=0.01, show_from_scratch=False,
             show_multi_head=False, show_cl_scenario=False,
@@ -704,14 +711,14 @@ def cl_args(parser, show_beta=True, dbeta=0.01, show_from_scratch=False,
 
     if show_from_scratch:
         agroup.add_argument('--train_from_scratch', action='store_true',
-                        help='If set, all networks are recreated after ' +
-                             'training on each task. Hence, training starts ' +
-                             'from scratch.')
+                            help='If set, all networks are recreated after ' +
+                                 'training on each task. Hence, training starts ' +
+                                 'from scratch.')
 
     if show_multi_head:
         agroup.add_argument('--multi_head', action='store_true',
-                        help='Use a multihead setting, where each task has ' +
-                             'its own output head.')
+                            help='Use a multihead setting, where each task has ' +
+                                 'its own output head.')
 
     if show_cl_scenario:
         agroup.add_argument('--cl_scenario', type=int, default=dcl_scenario,
@@ -741,6 +748,7 @@ def cl_args(parser, show_beta=True, dbeta=0.01, show_from_scratch=False,
                             help='Number of tasks. Default: %(default)s.')
 
     return agroup
+
 
 def gan_args(parser):
     """This is a helper method of the method `parse_cmd_arguments` to add
@@ -773,14 +781,14 @@ def gan_args(parser):
                                  'specify the hidden layers. ' +
                                  'Default: %(default)s.')
         agroup.add_argument('--%s_net_act' % n, type=str, default='relu',
-                        help='Activation function used in the %s network.' % m +
-                             'If "linear", no activation function is used. ' +
-                             'Default: %(default)s.',
-                        choices=['linear', 'sigmoid', 'relu', 'elu'])
+                            help='Activation function used in the %s network.' % m +
+                                 'If "linear", no activation function is used. ' +
+                                 'Default: %(default)s.',
+                            choices=['linear', 'sigmoid', 'relu', 'elu'])
         agroup.add_argument('--%s_dropout_rate' % n, type=float, default=-1,
-                        help='Use dropout in the %s with the given ' % m +
-                             'dropout probability (dropout is deactivated ' +
-                             'for a rate of -1). Default: %(default)s.')
+                            help='Use dropout in the %s with the given ' % m +
+                                 'dropout probability (dropout is deactivated ' +
+                                 'for a rate of -1). Default: %(default)s.')
         agroup.add_argument('--%s_batchnorm' % n, action='store_true',
                             help='Enable batchnorm in the %s.' % m)
         agroup.add_argument('--%s_specnorm' % n, action='store_true',
@@ -793,6 +801,7 @@ def gan_args(parser):
                         help='Standard deviation of the latent space. ' +
                              'Default: %(default)s.')
     return agroup
+
 
 def generator_args(agroup, dlatent_dim=3):
     """This is a helper method of the method `parse_cmd_arguments` (or more
@@ -818,6 +827,7 @@ def generator_args(agroup, dlatent_dim=3):
                         help='Standard deviation of the latent space. ' +
                              'Default: %(default)s.')
 
+
 def data_args(parser, show_disable_data_augmentation=False):
     """This is a helper method of the function `parse_cmd_arguments` to add
     an argument group for typical dataset related options.
@@ -837,16 +847,17 @@ def data_args(parser, show_disable_data_augmentation=False):
     agroup = parser.add_argument_group('Data-specific options')
 
     # FIXME At the moment, this is the only argument added by this function!
-    assert(show_disable_data_augmentation)
+    assert (show_disable_data_augmentation)
 
     if show_disable_data_augmentation:
         agroup.add_argument('--disable_data_augmentation', action='store_true',
-                        help='If activated, no data augmentation will be ' +
-                             'applied. Note, this option only affects ' +
-                             'datasets that have preprocessing implemented ' +
-                             '(such CIFAR-10).')
+                            help='If activated, no data augmentation will be ' +
+                                 'applied. Note, this option only affects ' +
+                                 'datasets that have preprocessing implemented ' +
+                                 '(such CIFAR-10).')
 
     return agroup
+
 
 def check_invalid_argument_usage(args):
     """This method checks for common conflicts when using the arguments defined
@@ -916,7 +927,7 @@ def check_invalid_argument_usage(args):
             warn('%s network uses ReLU activation functions. ' % args.net_type +
                  'Ignoring option "net_act".')
 
-        if args.net_type in ['bio_conv_net']: # and args.net_act != 'tanh':
+        if args.net_type in ['bio_conv_net']:  # and args.net_act != 'tanh':
             warn('%s network uses Tanh activation functions. ' % args.net_type +
                  'Ignoring option "net_act".')
 
@@ -971,7 +982,6 @@ def check_invalid_argument_usage(args):
         raise ValueError('Options "bn_no_running_stats" and ' +
                          '"bn_distill_stats" are not compatible')
 
+
 if __name__ == '__main__':
     pass
-
-

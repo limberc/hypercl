@@ -44,22 +44,22 @@ Please fill in the grid parameters in the corresponding config file (see
 command line argument `grid_module`).
 """
 # Do not delete the following import for all executable scripts!
-import __init__ # pylint: disable=unused-import
 
 import argparse
-import random
-import warnings
-import numpy as np
+import importlib
 import os
+import pickle
+import random
+import re
+import sys
+import time
+import traceback
+import warnings
 from datetime import datetime
 from subprocess import call
+
+import numpy as np
 import pandas
-import re
-import time
-import pickle
-import traceback
-import sys
-import importlib
 
 from utils import misc
 
@@ -72,22 +72,22 @@ _DEFAULT_GRID = 'mnist.hp_search_splitMNIST'
 # Name of the script that should be executed by the hyperparameter search.
 # Note, the working directory is set seperately by the hyperparameter search
 # script.
-_SCRIPT_NAME = None # Has to be specified in helper module!
+_SCRIPT_NAME = None  # Has to be specified in helper module!
 # This file is expected to reside in the output folder of the simulation.
-_SUMMARY_FILENAME = None # Has to be specified in helper module!
+_SUMMARY_FILENAME = None  # Has to be specified in helper module!
 # These are the keywords that are supposed to be in the summary file.
 # A summary file always has to include the keyword "finished"!.
-_SUMMARY_KEYWORDS = None # Has to be specified in helper module!
+_SUMMARY_KEYWORDS = None  # Has to be specified in helper module!
 # The name of the command-line argument that determines the output folder
 # of the simulation.
-_OUT_ARG = 'out_dir' # Default value if attribute `_OUT_ARG` does not exist.
+_OUT_ARG = 'out_dir'  # Default value if attribute `_OUT_ARG` does not exist.
 # Function handle to parser of performance summary file.
-_SUMMARY_PARSER_HANDLE = None # Default parser `_get_performance_summary` used.
+_SUMMARY_PARSER_HANDLE = None  # Default parser `_get_performance_summary` used.
 # A function handle, that is used to evaluate whether an output folder should
 # be kept.
-_PERFORMANCE_EVAL_HANDLE = None # Has to be set in config file.
+_PERFORMANCE_EVAL_HANDLE = None  # Has to be set in config file.
 # According to which keyword will the CSV be sorted.
-_PERFORMANCE_KEY = None # First key in `_SUMMARY_KEYWORDS` will be used.
+_PERFORMANCE_KEY = None  # First key in `_SUMMARY_KEYWORDS` will be used.
 # Sort order.
 _PERFORMANCE_SORT_ASC = False
 # FIXME should be deleted soon.
@@ -97,6 +97,7 @@ _ARGPARSE_HANDLE = None
 # This will be a list of booleans, each representing whether a specific cmd has
 # been executed.
 _CMD_FINISHED = None
+
 
 def _grid_to_commands(grid_dict):
     """Translate a dictionary of parameter values into a list of commands.
@@ -124,8 +125,8 @@ def _grid_to_commands(grid_dict):
             v = grid_dict[k][indices[i]]
             cmd[k] = v
         commands.append(cmd)
-        
-        for i in range(len(indices)-1,-1,-1):
+
+        for i in range(len(indices) - 1, -1, -1):
             indices[i] = (indices[i] + 1) % len(grid_dict[gkeys[i]])
             if indices[i] == 0 and i == 0:
                 stopping_criteria = True
@@ -133,6 +134,7 @@ def _grid_to_commands(grid_dict):
                 break
 
     return commands
+
 
 def _args_to_cmd_str(cmd_dict, out_dir=None):
     """Translate a dictionary of argument names to values into a string that
@@ -159,6 +161,7 @@ def _args_to_cmd_str(cmd_dict, out_dir=None):
             cmd_str += ' --%s=%s' % (k, str(v))
 
     return cmd_str
+
 
 def _get_performance_summary(out_dir, cmd_ident):
     """Parse the performance summary file of a simulation.
@@ -191,7 +194,7 @@ def _get_performance_summary(out_dir, cmd_ident):
     result_summary_fn = os.path.join(out_dir, _SUMMARY_FILENAME)
     if not os.path.exists(result_summary_fn):
         raise IOError('Training run %d did not finish. No results!' \
-                      % (cmd_ident+1))
+                      % (cmd_ident + 1))
 
     with open(result_summary_fn, 'r') as f:
         result_summary = f.readlines()
@@ -209,9 +212,9 @@ def _get_performance_summary(out_dir, cmd_ident):
         _, line = line.split(' ', maxsplit=1)
         # https://stackoverflow.com/questions/4703390/how-to-extract-a-floating-number-from-a-string
         line_nums = re.findall(r"[-+]?\d*\.\d+|\d+", line)
-        if len(line_nums) == 1: # Single number
+        if len(line_nums) == 1:  # Single number
             performance_dict[key] = [line_nums[0]]
-        else: # List of numbers
+        else:  # List of numbers
             # Convert list to a string for the resulting CSV file. Note, the
             # quotes are needed that the list will be written into a single cell
             # when opening the csv file (note, every key can have exactly one
@@ -220,6 +223,7 @@ def _get_performance_summary(out_dir, cmd_ident):
                 ['"' + misc.list_to_str(line_nums, delim=',') + '"']
 
     return performance_dict
+
 
 def _run_cmds_on_single_machine(args, commands, out_dir, results_file):
     """Method to run the jobs sequentially on a single machine.
@@ -239,19 +243,19 @@ def _run_cmds_on_single_machine(args, commands, out_dir, results_file):
         try:
             # FIXME quick and dirty solution.
             cmd_out_dir = os.path.join(out_dir,
-                datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3])
+                                       datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3])
             if os.path.exists(cmd_out_dir):
                 time.sleep(1.1)
                 cmd_out_dir = os.path.join(out_dir,
-                    datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3])
-            assert(not os.path.exists(cmd_out_dir))
+                                           datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3])
+            assert (not os.path.exists(cmd_out_dir))
 
             cmd_str = _args_to_cmd_str(cmd_dict, out_dir=cmd_out_dir)
             cmd_dict[_OUT_ARG] = cmd_out_dir
 
             # Execute the program.
-            print('Starting training run %d/%d -- "%s"' % (i+1, len(commands),
-                                                            cmd_str))
+            print('Starting training run %d/%d -- "%s"' % (i + 1, len(commands),
+                                                           cmd_str))
             ret = call(cmd_str, shell=True)
             print('Call finished with return code %d.' % ret)
 
@@ -287,12 +291,13 @@ def _run_cmds_on_single_machine(args, commands, out_dir, results_file):
             except Exception:
                 traceback.print_exc(file=sys.stdout)
                 warnings.warn('Could not assess whether run %d has been ' \
-                                % (i+1) + 'completed.')
+                              % (i + 1) + 'completed.')
 
         except Exception:
             traceback.print_exc(file=sys.stdout)
-            warnings.warn('Call %d/%d failed -- "%s".' % (i+1, len(commands), \
-                _args_to_cmd_str(cmd_dict)))
+            warnings.warn('Call %d/%d failed -- "%s".' % (i + 1, len(commands), \
+                                                          _args_to_cmd_str(cmd_dict)))
+
 
 def _run_cmds_on_cluster(args, commands, out_dir, results_file):
     """This method will submit a certain number of jobs onto an LSF cluster and
@@ -351,7 +356,7 @@ def _run_cmds_on_cluster(args, commands, out_dir, results_file):
             except Exception:
                 traceback.print_exc(file=sys.stdout)
                 warnings.warn('Could not assess whether run %d has been ' \
-                              % (ind+1) + 'completed.')
+                              % (ind + 1) + 'completed.')
 
         return jobs
 
@@ -372,13 +377,13 @@ def _run_cmds_on_cluster(args, commands, out_dir, results_file):
             time.sleep(1.1)
             folder_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]
         cmd_out_dir = os.path.join(out_dir, folder_name)
-        assert(not os.path.exists(cmd_out_dir))
+        assert (not os.path.exists(cmd_out_dir))
 
         cmd_str = _args_to_cmd_str(cmd_dict, out_dir=cmd_out_dir)
         cmd_dict[_OUT_ARG] = cmd_out_dir
 
         # Execute the program.
-        print('Starting training run %d/%d -- "%s"' % (i+1, len(commands),
+        print('Starting training run %d/%d -- "%s"' % (i + 1, len(commands),
                                                        cmd_str))
 
         job_name = 'job_%s' % folder_name
@@ -396,6 +401,7 @@ def _run_cmds_on_cluster(args, commands, out_dir, results_file):
     while len(jobs) > 0:
         time.sleep(10)
         jobs = check_running(jobs)
+
 
 def _backup_commands(commands, out_dir):
     """This function will generate a bash script that resembles the order in
@@ -426,6 +432,7 @@ def _backup_commands(commands, out_dir):
         for cmd in commands:
             f.write('%s\n\n' % (_args_to_cmd_str(cmd)))
 
+
 def _store_incomplete(commands, out_dir):
     """This function will pickle all command dictionaries of commands that have
     not been completed. This might be used to just continue an interrupted
@@ -449,6 +456,7 @@ def _store_incomplete(commands, out_dir):
     with open(fn_pickle, 'wb') as f:
         pickle.dump(incomplete, f)
 
+
 def _read_config(config_mod, require_perf_eval_handle=False,
                  require_argparse_handle=False):
     """Parse the configuration module and check whether all attributes are set
@@ -465,10 +473,10 @@ def _read_config(config_mod, require_perf_eval_handle=False,
         require_argparse_handle: Whether :attr:`_ARGPARSE_HANDLE` has to be
             specified in the config file.
     """
-    assert(hasattr(config_mod, '_SCRIPT_NAME'))
-    assert(hasattr(config_mod, '_SUMMARY_FILENAME'))
-    assert(hasattr(config_mod, '_SUMMARY_KEYWORDS') and \
-           'finished' in config_mod._SUMMARY_KEYWORDS)
+    assert (hasattr(config_mod, '_SCRIPT_NAME'))
+    assert (hasattr(config_mod, '_SUMMARY_FILENAME'))
+    assert (hasattr(config_mod, '_SUMMARY_KEYWORDS') and \
+            'finished' in config_mod._SUMMARY_KEYWORDS)
     globals()['_SCRIPT_NAME'] = config_mod._SCRIPT_NAME
     globals()['_SUMMARY_FILENAME'] = config_mod._SUMMARY_FILENAME
     globals()['_SUMMARY_KEYWORDS'] = config_mod._SUMMARY_KEYWORDS
@@ -484,8 +492,8 @@ def _read_config(config_mod, require_perf_eval_handle=False,
         globals()['_SUMMARY_PARSER_HANDLE'] = _get_performance_summary
 
     if require_perf_eval_handle:
-        assert(hasattr(config_mod, '_PERFORMANCE_EVAL_HANDLE') and \
-               config_mod._PERFORMANCE_EVAL_HANDLE is not None)
+        assert (hasattr(config_mod, '_PERFORMANCE_EVAL_HANDLE') and \
+                config_mod._PERFORMANCE_EVAL_HANDLE is not None)
         globals()['_PERFORMANCE_EVAL_HANDLE'] = \
             config_mod._PERFORMANCE_EVAL_HANDLE
     else:
@@ -505,15 +513,16 @@ def _read_config(config_mod, require_perf_eval_handle=False,
         globals()['_PERFORMANCE_SORT_ASC'] = config_mod._PERFORMANCE_SORT_ASC
 
     if require_argparse_handle:
-        assert(hasattr(config_mod, '_ARGPARSE_HANDLE') and \
-               config_mod._ARGPARSE_HANDLE is not None)
+        assert (hasattr(config_mod, '_ARGPARSE_HANDLE') and \
+                config_mod._ARGPARSE_HANDLE is not None)
         globals()['_ARGPARSE_HANDLE'] = config_mod._ARGPARSE_HANDLE
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description= \
-        'hpsearch - Automatic Parameter Search -- ' +
-        'Note, that the search values are defined in the source code of the ' +
-        'accompanied configuration file!')
+                                         'hpsearch - Automatic Parameter Search -- ' +
+                                         'Note, that the search values are defined in the source code of the ' +
+                                         'accompanied configuration file!')
     parser.add_argument('--deterministic_search', action='store_true',
                         help='If not selected, the order of configurations ' +
                              'is randomly picked.')
@@ -567,11 +576,11 @@ if __name__ == '__main__':
 
     ### Get hyperparameter search grid from specified module.
     grid_module = importlib.import_module(args.grid_module)
-    assert(hasattr(grid_module, 'grid') and hasattr(grid_module, 'conditions'))
+    assert (hasattr(grid_module, 'grid') and hasattr(grid_module, 'conditions'))
     grid = grid_module.grid
     conditions = grid_module.conditions
 
-    assert(len(grid) > 0)
+    assert (len(grid) > 0)
 
     _read_config(grid_module)
 
@@ -587,10 +596,10 @@ if __name__ == '__main__':
 
     ### Output directory creation.
     out_dir = os.path.join(args.out_dir,
-        'search_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+                           'search_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     print('Results will be stored in %s.' % os.path.abspath(out_dir))
     # FIXME we should build in possibilities to merge with previous searches.
-    assert(not os.path.exists(out_dir))
+    assert (not os.path.exists(out_dir))
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
@@ -603,7 +612,7 @@ if __name__ == '__main__':
         for k in cond[0].keys():
             if k not in grid.keys():
                 warnings.warn('Condition %d can not be enforced. ' % (i) +
-                    'Key %s is not specified in grid -- %s.' % (k, str(cond)))
+                              'Key %s is not specified in grid -- %s.' % (k, str(cond)))
 
     # Now, we have the commands according to the grid, but we still need to
     # enforce the conditions.
@@ -654,7 +663,7 @@ if __name__ == '__main__':
     for i in range(len(old_cmds)):
         cmd_i = old_cmds[i]
         has_dublicate = False
-        for j in range(i+1, len(old_cmds)):
+        for j in range(i + 1, len(old_cmds)):
             cmd_j = old_cmds[j]
 
             if len(cmd_i.keys()) != len(cmd_j.keys()):
@@ -715,7 +724,7 @@ if __name__ == '__main__':
     ### Sort CSV file according to performance key.
     csv_file_content = pandas.read_csv(results_file, sep=';')
     csv_file_content = csv_file_content.sort_values(_PERFORMANCE_KEY,
-        ascending=_PERFORMANCE_SORT_ASC)
+                                                    ascending=_PERFORMANCE_SORT_ASC)
     csv_file_content.to_csv(results_file, sep=';', index=False)
 
     print('### Running Hyperparameter Search ... Done')

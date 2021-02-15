@@ -343,7 +343,6 @@ class SAHnetPart(nn.Module, CLHyperNetInterface):
         if task_id is not None or task_emb is not None:
             raise Exception('This hypernet does not support task embeddings, ' +
                             'please concatenate them to the external input.')
-
         if ext_inputs is None:
             raise ValueError('This hypernet type always expects an external ' +
                              'input ("ext_inputs" must be set).')
@@ -351,7 +350,6 @@ class SAHnetPart(nn.Module, CLHyperNetInterface):
         if not self.has_theta and theta is None:
             raise Exception('Network was generated without internal weights. ' +
                             'Hence, "theta" option may not be None.')
-
         if theta is None:
             theta = self.theta
         else:

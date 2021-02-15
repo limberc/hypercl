@@ -32,6 +32,7 @@ import warnings
 
 import utils.cli_args as cli
 
+
 def parse_cmd_arguments(mode='resnet_cifar', default=False, argv=None):
     """Parse command-line arguments.
 
@@ -65,45 +66,45 @@ def parse_cmd_arguments(mode='resnet_cifar', default=False, argv=None):
 
     if mode == 'resnet_cifar':
         dout_dir = './out_resnet/run_' + \
-            datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                   datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         cl_group = cli.cl_args(parser, show_beta=True, dbeta=0.05,
-            show_from_scratch=True, show_multi_head=False,
-            show_cl_scenario=True, show_split_head_cl3=False,
-            show_num_tasks=True, dnum_tasks=6)
+                               show_from_scratch=True, show_multi_head=False,
+                               show_cl_scenario=True, show_split_head_cl3=False,
+                               show_num_tasks=True, dnum_tasks=6)
         cli.main_net_args(parser, allowed_nets=['resnet'], show_batchnorm=False,
-            show_no_batchnorm=True, show_bn_no_running_stats=True,
-            show_bn_distill_stats=True, show_bn_no_stats_checkpointing=True,
-            show_specnorm=False, show_dropout_rate=False, show_net_act=False)
+                          show_no_batchnorm=True, show_bn_no_running_stats=True,
+                          show_bn_distill_stats=True, show_bn_no_stats_checkpointing=True,
+                          show_specnorm=False, show_dropout_rate=False, show_net_act=False)
         cli.hypernet_args(parser, dhyper_chunks=7000, dhnet_arch='',
                           dtemb_size=32, demb_size=32)
         cli.data_args(parser, show_disable_data_augmentation=True)
         train_agroup = cli.train_args(parser, show_lr=True, dlr=0.001,
-            show_epochs=True, depochs=200, dbatch_size=32,
-            dn_iter=2000, show_use_adam=True, show_use_rmsprop=True,
-            show_use_adadelta=False, show_use_adagrad=False,
-            show_clip_grad_value=False, show_clip_grad_norm=False)
+                                      show_epochs=True, depochs=200, dbatch_size=32,
+                                      dn_iter=2000, show_use_adam=True, show_use_rmsprop=True,
+                                      show_use_adadelta=False, show_use_adagrad=False,
+                                      show_clip_grad_value=False, show_clip_grad_norm=False)
 
     elif mode == 'zenke_cifar':
         dout_dir = './out_zenke/run_' + \
-            datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                   datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         cl_group = cli.cl_args(parser, show_beta=True, dbeta=0.01,
-            show_from_scratch=True, show_multi_head=False,
-            show_cl_scenario=True, show_split_head_cl3=False,
-            show_num_tasks=True, dnum_tasks=6)
+                               show_from_scratch=True, show_multi_head=False,
+                               show_cl_scenario=True, show_split_head_cl3=False,
+                               show_num_tasks=True, dnum_tasks=6)
         cli.main_net_args(parser, allowed_nets=['zenke'], show_batchnorm=False,
-            show_no_batchnorm=False, show_dropout_rate=True, ddropout_rate=0.25,
-            show_specnorm=False, show_net_act=False)
+                          show_no_batchnorm=False, show_dropout_rate=True, ddropout_rate=0.25,
+                          show_specnorm=False, show_net_act=False)
         cli.hypernet_args(parser, dhyper_chunks=5500, dhnet_arch='100,150,200',
                           dtemb_size=48, demb_size=80)
         cli.data_args(parser, show_disable_data_augmentation=True)
         train_agroup = cli.train_args(parser, show_lr=True, dlr=0.0001,
-            show_epochs=True, depochs=80, dbatch_size=256,
-            dn_iter=2000, show_use_adam=True,
-            dadam_beta1=0.5, show_use_rmsprop=True,
-            show_use_adadelta=False, show_use_adagrad=False,
-            show_clip_grad_value=False, show_clip_grad_norm=False)
+                                      show_epochs=True, depochs=80, dbatch_size=256,
+                                      dn_iter=2000, show_use_adam=True,
+                                      dadam_beta1=0.5, show_use_rmsprop=True,
+                                      show_use_adadelta=False, show_use_adagrad=False,
+                                      show_clip_grad_value=False, show_clip_grad_norm=False)
 
     special_cl_options(cl_group)
     special_train_options(train_agroup)
@@ -111,7 +112,7 @@ def parse_cmd_arguments(mode='resnet_cifar', default=False, argv=None):
     special_init_options(init_group)
     cli.eval_args(parser, show_val_batch_size=True, dval_batch_size=1000)
     cli.miscellaneous_args(parser, big_data=False, synthetic_data=False,
-        show_plots=False, no_cuda=False, dout_dir=dout_dir)
+                           show_plots=False, no_cuda=False, dout_dir=dout_dir)
 
     args = None
     if argv is not None:
@@ -132,7 +133,7 @@ def parse_cmd_arguments(mode='resnet_cifar', default=False, argv=None):
 
     if config.cl_scenario != 1:
         raise NotImplementedError('CIFAR experiments are currently only ' +
-            'implemented for CL1.')
+                                  'implemented for CL1.')
 
     if config.plateau_lr_scheduler and config.epochs == -1:
         raise ValueError('Flag "plateau_lr_scheduler" can only be used if ' +
@@ -147,6 +148,7 @@ def parse_cmd_arguments(mode='resnet_cifar', default=False, argv=None):
                          'simultaneously.')
 
     return config
+
 
 def general_options(parser):
     """This is a helper function of the function `parse_cmd_arguments` to create
@@ -166,6 +168,7 @@ def general_options(parser):
                         help='Train the main network without a hypernetwork. ' +
                              'No continual learning support!')
 
+
 def special_init_options(agroup):
     """This is a helper function of the function `parse_cmd_arguments` to add
     arguments to the `initialization` argument group.
@@ -176,8 +179,9 @@ def special_init_options(agroup):
     """
     agroup.add_argument('--hnet_init_shift', action='store_true',
                         help='Shift the initial hnet output such that it ' +
-                             'resembles a xavier or normal init for the ' + 
-                             'target network.' )
+                             'resembles a xavier or normal init for the ' +
+                             'target network.')
+
 
 def special_cl_options(agroup):
     """This is a helper function of the function `parse_cmd_arguments` to add
@@ -224,6 +228,7 @@ def special_cl_options(agroup):
                         help='Allow backpropagation through "delta theta" in ' +
                              'the regularizer.')
 
+
 def special_train_options(agroup):
     """This is a helper function of the function `parse_cmd_arguments` to add
     arguments to the `training` argument group.
@@ -246,9 +251,8 @@ def special_train_options(agroup):
                              'the function "lr_schedule" in ' +
                              'https://keras.io/examples/cifar10_resnet/.')
     agroup.add_argument('--soft_targets', action='store_true',
-                        help='Use soft targets for classification.')                           
+                        help='Use soft targets for classification.')
+
 
 if __name__ == '__main__':
     pass
-
-

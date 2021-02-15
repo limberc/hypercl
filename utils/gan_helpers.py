@@ -26,6 +26,7 @@ e.g., several GAN losses.
 import torch
 import torch.nn.functional as F
 
+
 def dis_loss(logit_real, logit_fake, loss_choice):
     """Compute the loss for the discriminator.
 
@@ -60,26 +61,27 @@ def dis_loss(logit_real, logit_fake, loss_choice):
     Returns:
         The discriminator loss.
     """
-    if loss_choice == 0: # Vanilla GAN
+    if loss_choice == 0:  # Vanilla GAN
         # We use the binary cross entropy.
         # Note, we use one-sided label-smoothing.
         fake = torch.sigmoid(logit_fake)
         real = torch.sigmoid(logit_real)
-        r_loss = F.binary_cross_entropy(real, 0.9*torch.ones_like(real))
+        r_loss = F.binary_cross_entropy(real, 0.9 * torch.ones_like(real))
         f_loss = F.binary_cross_entropy(fake, torch.zeros_like(fake))
 
-    elif loss_choice == 1: # Traditional LSGAN
+    elif loss_choice == 1:  # Traditional LSGAN
         r_loss = F.mse_loss(logit_real, torch.ones_like(logit_real))
         f_loss = F.mse_loss(logit_fake, torch.zeros_like(logit_fake))
 
-    elif loss_choice == 2: # Pearson Chi^2 LSGAN
+    elif loss_choice == 2:  # Pearson Chi^2 LSGAN
         r_loss = F.mse_loss(logit_real, torch.ones_like(logit_real))
         f_loss = F.mse_loss(logit_fake, -torch.ones_like(logit_fake))
-    else: # WGAN
+    else:  # WGAN
         r_loss = -logit_real.mean()
         f_loss = logit_fake.mean()
-    
+
     return (r_loss + f_loss)
+
 
 def gen_loss(logit_fake, loss_choice):
     """Compute the loss for the generator.
@@ -90,19 +92,20 @@ def gen_loss(logit_fake, loss_choice):
     Returns:
         The generator loss.
     """
-    if loss_choice == 0: # Vanilla GAN
+    if loss_choice == 0:  # Vanilla GAN
         # We use the -log(D) trick.
         fake = torch.sigmoid(logit_fake)
         return F.binary_cross_entropy(fake, torch.ones_like(fake))
 
-    elif loss_choice == 1: # Traditional LSGAN
+    elif loss_choice == 1:  # Traditional LSGAN
         return F.mse_loss(logit_fake, torch.ones_like(logit_fake))
 
-    elif loss_choice == 2: # Pearson Chi^2 LSGAN
+    elif loss_choice == 2:  # Pearson Chi^2 LSGAN
         return F.mse_loss(logit_fake, torch.zeros_like(logit_fake))
 
-    else: # WGAN
+    else:  # WGAN
         return -logit_fake.mean()
+
 
 def accuracy(logit_real, logit_fake, loss_choice):
     """The accuracy of the discriminator.
@@ -126,7 +129,7 @@ def accuracy(logit_real, logit_fake, loss_choice):
     """
     T = 0.5 if loss_choice < 2 else 0.0
 
-    #if loss_choice == 0:
+    # if loss_choice == 0:
     #    fake = torch.sigmoid(logit_fake)
     #    real = torch.sigmoid(logit_real)
 
@@ -137,6 +140,7 @@ def accuracy(logit_real, logit_fake, loss_choice):
 
     n_correct = (logit_real > T).float().sum() + (logit_fake <= T).float().sum()
     return n_correct / (logit_real.numel() + logit_fake.numel())
+
 
 def concat_mean_stats(inputs):
     """Add mean statistics to discriminator input.
@@ -159,7 +163,6 @@ def concat_mean_stats(inputs):
     stats = stats.expand(inputs.size())
     return torch.cat([stats, inputs], dim=1)
 
+
 if __name__ == '__main__':
     pass
-
-

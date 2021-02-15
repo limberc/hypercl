@@ -28,28 +28,24 @@ a hypernetwork, i.e., a hypernetwork that produces the weights of the decoder.
 """
 
 # Do not delete the following import for all executable scripts!
-import __init__ # pylint: disable=unused-import
 
-import torch
-import torch.optim as optim
-import torch.nn.functional as F
-from torch import nn
-import os
-from warnings import warn
 import numpy as np
-
-from mnist import train_utils
-from mnist.replay import train_utils_replay
-from mnist.replay import train_args_replay
-from mnist.plotting import _viz_init, _viz_training, _plotImages
-from mnist.replay.train_gan import train_gan_one_t
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
+from torch import nn
 
 import utils.hnet_regularizer as hreg
 import utils.optim_step as opstep
+from mnist import train_utils
+from mnist.plotting import _viz_init, _viz_training, _plotImages
+from mnist.replay import train_args_replay
+from mnist.replay import train_utils_replay
+from mnist.replay.train_gan import train_gan_one_t
 
 
-def test(enc, dec, d_hnet, device, config, writer, train_iter=None, 
-                                                                condition=None):
+def test(enc, dec, d_hnet, device, config, writer, train_iter=None,
+         condition=None):
     """ Test the MNIST VAE - here we only sample from a fixed noise to compare
     images qualitatively. One should also keep track of the reconstruction 
     error of e.g. a test set.
@@ -67,8 +63,8 @@ def test(enc, dec, d_hnet, device, config, writer, train_iter=None,
               train_iter)
     # if no condition is given, we iterate over all (trained) embeddings
     if condition is None:
-        condition = config.num_embeddings - 1 
-    # eval all nets
+        condition = config.num_embeddings - 1
+        # eval all nets
     enc.eval()
     dec.eval()
     if d_hnet is not None:
@@ -79,19 +75,20 @@ def test(enc, dec, d_hnet, device, config, writer, train_iter=None,
         for m in range(condition + 1):
             # Get pre training saved noise
             z = config.test_z[m]
-            reconstructions = sample(dec, d_hnet, config, m, device, z = z)
+            reconstructions = sample(dec, d_hnet, config, m, device, z=z)
             if config.show_plots:
                 fig_real = _plotImages(reconstructions, config)
-                writer.add_figure('test_cond_' + str(m) + 
-                                    '_sampled_after_'+str(condition), fig_real, 
-                                                global_step=train_iter)
+                writer.add_figure('test_cond_' + str(m) +
+                                  '_sampled_after_' + str(condition), fig_real,
+                                  global_step=train_iter)
                 if train_iter == config.n_iter:
-                    writer.add_figure('test_cond_final_' + str(m) + 
-                                    '_sampled_after_'+str(condition), fig_real, 
-                                                global_step=train_iter)
+                    writer.add_figure('test_cond_final_' + str(m) +
+                                      '_sampled_after_' + str(condition), fig_real,
+                                      global_step=train_iter)
             # TODO write test reconstrunction error           
 
-def sample(dec, d_hnet, config, condition, device, z = None, bs = None):
+
+def sample(dec, d_hnet, config, condition, device, z=None, bs=None):
     """Sample from the decoder. Given a certain condition (the task id),
     we sample from the decoder model a batch of replay data. This input of the 
     decoder will be a noise vector (optional with a specific mean) and/or and
@@ -106,24 +103,24 @@ def sample(dec, d_hnet, config, condition, device, z = None, bs = None):
     Returns:
         Batch of replay data from the decoder, given a certain 
         condition / task id.
-    """ 
-    
+    """
+
     if z is None:
         # get the prior mean  
         if config.conditional_prior:
             cur_prior = config.priors[condition]
         else:
             cur_prior = torch.zeros((config.batch_size,
-                                           config.latent_dim)).to(device)
-        
+                                     config.latent_dim)).to(device)
+
         # sample normal gaussian and build noise vector
         eps = torch.randn_like(cur_prior)
         z = cur_prior + eps
 
     # get condition if given
     if config.conditional_replay:
-        z = torch.cat([z, config.vae_conds[condition]], dim = 1)
-    
+        z = torch.cat([z, config.vae_conds[condition]], dim=1)
+
     # cut for replay when we need the X_fake from all previous tasks need to sum
     # up the given batch_size such that batch_size(X_fake) == batch_size(X_real) 
     if bs is not None:
@@ -137,6 +134,7 @@ def sample(dec, d_hnet, config, condition, device, z = None, bs = None):
     samples = dec.forward(z, weights_d)
 
     return torch.sigmoid(samples)
+
 
 def init_plotting_embedding(dhandlers, d_hnet, writer, config):
     """ This is a helper function to get lists to plot embedding histories.
@@ -152,18 +150,19 @@ def init_plotting_embedding(dhandlers, d_hnet, writer, config):
         _, dec_embs = _viz_init(dhandlers, None, d_hnet, writer, config)
         if d_hnet is not None:
             dec_embs_history = []
-            if(not config.no_cuda):
+            if (not config.no_cuda):
                 dec_embs_history.append(d_hnet.get_task_emb(0).
-                                                        cpu().detach().numpy())
+                                        cpu().detach().numpy())
             else:
                 dec_embs_history.append(d_hnet.get_task_emb(0).
-                                                        detach().numpy())
+                                        detach().numpy())
         else:
             dec_embs_history = None
 
         return [None, dec_embs, None, dec_embs_history]
     else:
         return [None, None, None, None]
+
 
 def reparameterize(mu, logvar):
     """Reparameterize encoder output for vae loss. Code from
@@ -178,9 +177,10 @@ def reparameterize(mu, logvar):
     Returns:
         Sample from the Gaussian through the reparameterization trick.
     """
-    std = torch.exp(0.5*logvar)
+    std = torch.exp(0.5 * logvar)
     eps = torch.randn_like(std)
-    return mu + eps*std
+    return mu + eps * std
+
 
 def compute_kld(mu, logvar, config, t):
     """Compute the kullback-leibler divergence between normal gaussian around
@@ -205,15 +205,16 @@ def compute_kld(mu, logvar, config, t):
     else:
         cur_prior = 0
     kld = -0.5 * torch.sum(1 + logvar - (mu - cur_prior).pow(2) - \
-                            logvar.exp(), dim =1)
+                           logvar.exp(), dim=1)
     # average kl by input dim (to compare to related work, see
     # https://github.com/GMvandeVen/continual-learning/blob/master/train.py)
 
     kld = torch.mean(kld) / config.input_dim
     return kld
 
-def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer, 
-                                                                  embd_list, t):
+
+def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
+                    embd_list, t):
     """ Train the conditional MNIST VAE for one task.
     In this function the main training logic for this replay model is 
     implemented. After setting the optimizers for the encoder/decoder and it's
@@ -228,7 +229,7 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
         t: Task id that will be trained.
 
     """
-    
+
     # set to training mode 
     enc.train()
     dec.train()
@@ -239,15 +240,15 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
     print("Training VAE on data handler: ", t)
 
     # get lists for plotting embeddings
-    enc_embs, dec_embs, enc_embs_history, dec_embs_history = embd_list[:]        
+    enc_embs, dec_embs, enc_embs_history, dec_embs_history = embd_list[:]
     # set training_iterations if epochs are set
     if config.epochs == -1:
         training_iterations = config.n_iter
     else:
-        assert(config.epochs > 0)
+        assert (config.epochs > 0)
         training_iterations = config.epochs * \
-        int(np.ceil(dhandler.num_train_samples / config.batch_size))
-        
+                              int(np.ceil(dhandler.num_train_samples / config.batch_size))
+
     # Here we adjust the number of training iterations when we train our replay 
     # method to replay every single class in a task given that condition. 
     # We need to adjust the training iterations such that we train every 
@@ -256,16 +257,16 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
     # Training_time_per_class = training_time_per_task / num_class_per_task
     # This is important to compare to related work, as they set the training 
     # time per task which we now have to split up.
-      
+
     if config.single_class_replay:
-        training_iterations = int(training_iterations/config.out_dim)
-    
+        training_iterations = int(training_iterations / config.out_dim)
+
     # if we want to start training the new task with the weights of the previous
     # task we have to set the start embedding for the new task to the embedding
     # of the previous task. 
     if config.embedding_reset == "old_embedding" and t > 0:
         if d_hnet is not None:
-            last_emb = d_hnet.get_task_embs()[t-1].detach().clone()
+            last_emb = d_hnet.get_task_embs()[t - 1].detach().clone()
             d_hnet.get_task_embs()[t].data = last_emb
 
     # Compute targets for the hnet before training. 
@@ -274,7 +275,7 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
             targets_D = hreg.get_current_targets(t, d_hnet)
         else:
             targets_D = None
-    
+
     ############
     # OPTIMIZERS 
     ############
@@ -282,7 +283,7 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
     # encoder optimizer
     e_paras = enc.parameters()
     eoptimizer = optim.Adam(e_paras, lr=config.enc_lr,
-                                betas=(0.9, 0.999))
+                            betas=(0.9, 0.999))
 
     # decoder optimizer (hnet or weights directly)
     if d_hnet is not None:
@@ -290,16 +291,16 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
         if not config.dont_train_rp_embeddings:
             # Set the embedding optimizer only for the current task embedding.
             # Note that we could here continue training the old embeddings.
-            d_emb_optimizer = optim.Adam([d_hnet.get_task_emb(t)], 
-               lr=config.dec_lr_emb, betas=(0.9, 0.999))
+            d_emb_optimizer = optim.Adam([d_hnet.get_task_emb(t)],
+                                         lr=config.dec_lr_emb, betas=(0.9, 0.999))
         else:
-            d_emb_optimizer = None         
+            d_emb_optimizer = None
     else:
-        d_emb_optimizer = None       
+        d_emb_optimizer = None
         d_paras = dec.parameters()
 
-    doptimizer = optim.Adam(d_paras, lr=config.dec_lr, 
-                                 betas=(0.9, 0.999))
+    doptimizer = optim.Adam(d_paras, lr=config.dec_lr,
+                            betas=(0.9, 0.999))
 
     calc_reg = config.rp_beta > 0 and t > 0 and d_hnet is not None
 
@@ -325,41 +326,41 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
         # We want to visualize the hnet embedding trajectories. 
         if config.show_plots:
             if d_hnet is not None:
-                if(not config.no_cuda):
+                if (not config.no_cuda):
                     dec_embs_history.append(d_hnet.get_task_emb(t).
                                             clone().detach().cpu().numpy())
                 else:
                     dec_embs_history.append(d_hnet.get_task_emb(t).
-                                                clone().detach().numpy())
+                                            clone().detach().numpy())
 
         #######
         # DATA 
         #######
         real_batch = dhandler.next_train_batch(config.batch_size)
-        X_real = dhandler.input_to_torch_tensor(real_batch[0], device, 
-                                                                   mode='train')
+        X_real = dhandler.input_to_torch_tensor(real_batch[0], device,
+                                                mode='train')
 
         # set gradients again to zero
         eoptimizer.zero_grad()
         doptimizer.zero_grad()
         if d_emb_optimizer is not None:
             d_emb_optimizer.zero_grad()
-    
+
         ############################
         # KLD + RECONSTRUCTION 
         ############################
 
         # feed data through encoder
         mu_var = enc.forward(X_real)
-        mu = mu_var[:,0: config.latent_dim]
-        logvar= mu_var[:, config.latent_dim:2* config.latent_dim]
-        
+        mu = mu_var[:, 0: config.latent_dim]
+        logvar = mu_var[:, config.latent_dim:2 * config.latent_dim]
+
         # compute KLD
         kld = compute_kld(mu, logvar, config, t)
 
         # sample from encoder gaussian distribution
         dec_input = reparameterize(mu, logvar)
-        reconstructions = sample(dec, d_hnet, config, t, device, z = dec_input)
+        reconstructions = sample(dec, d_hnet, config, t, device, z=dec_input)
         # average reconstruction error like this to compare to related work, see
         # https://github.com/GMvandeVen/continual-learning/blob/master/train.py
 
@@ -367,15 +368,15 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
                                             X_real, reduction='none')
         x_rec_loss = torch.mean(x_rec_loss, dim=1)
         x_rec_loss = torch.mean(x_rec_loss)
-        
+
         loss = x_rec_loss + kld
 
         ######################################################
         # HYPERNET REGULARISATION - CONTINUAL LEARNING METHOD
         ######################################################
 
-        loss.backward(retain_graph=calc_reg,create_graph=calc_reg and \
-                           config.backprop_dt)
+        loss.backward(retain_graph=calc_reg, create_graph=calc_reg and \
+                                                          config.backprop_dt)
 
         # compute hypernet loss and fix embedding -> change current embs
         if calc_reg:
@@ -383,34 +384,34 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
                 dTheta = None
             else:
                 dTheta = opstep.calc_delta_theta(doptimizer,
-                    config.use_sgd_change, lr=config.dec_lr,
-                    detach_dt=not config.backprop_dt)
-            dloss_reg = config.rp_beta* hreg.calc_fix_target_reg(d_hnet, t, 
-                            targets=targets_D, 
-                            mnet=dec, dTheta=dTheta, dTembs=None)
-            dloss_reg.backward()                 
+                                                 config.use_sgd_change, lr=config.dec_lr,
+                                                 detach_dt=not config.backprop_dt)
+            dloss_reg = config.rp_beta * hreg.calc_fix_target_reg(d_hnet, t,
+                                                                  targets=targets_D,
+                                                                  mnet=dec, dTheta=dTheta, dTembs=None)
+            dloss_reg.backward()
         else:
             dloss_reg = 0
-        
+
         # compute gradients for generator and take gradient step
         doptimizer.step()
         eoptimizer.step()
         if d_hnet is not None and not config.dont_train_rp_embeddings:
             d_emb_optimizer.step()
-        
+
         # Visualization of current progress in tensorboard
-        if(i % config.plot_update_steps == 0 and i > 0 and config.show_plots):
+        if (i % config.plot_update_steps == 0 and i > 0 and config.show_plots):
             if dec_embs_history is not None:
-                dec_embedding_cut =  np.asarray(dec_embs_history[2:])
+                dec_embedding_cut = np.asarray(dec_embs_history[2:])
             else:
                 dec_embedding_cut = None
             if enc_embs_history is not None:
                 enc_embedding_cut = np.asarray(enc_embs_history[2:])
             else:
                 enc_embedding_cut = None
-            _viz_training(X_real, reconstructions, enc_embs, 
-                dec_embs, enc_embedding_cut, dec_embedding_cut,
-                writer, i, config, title="train_cond_" + str(t))
+            _viz_training(X_real, reconstructions, enc_embs,
+                          dec_embs, enc_embedding_cut, dec_embedding_cut,
+                          writer, i, config, title="train_cond_" + str(t))
 
         # track some training statistics
         writer.add_scalar('train/kld_%d' % (t), kld, i)
@@ -420,6 +421,7 @@ def train_vae_one_t(dhandler, enc, dec, d_hnet, device, config, writer,
             writer.add_scalar('train/d_hnet_loss_reg_%d' % (t), dloss_reg, i)
 
     test(enc, dec, d_hnet, device, config, writer, config.n_iter, t)
+
 
 def train(dhandlers, enc, dec, d_hnet, device, config, writer):
     """ Train replay model in continual fashion on MNIST dataset.
@@ -438,18 +440,20 @@ def train(dhandlers, enc, dec, d_hnet, device, config, writer):
     """
 
     print('Training the MNIST replay model ...')
-    
+
     # get embedding lists for plotting
     embd_list = init_plotting_embedding(dhandlers, d_hnet, writer, config)
     # train the replay model task by task
     for t in range(config.num_embeddings):
         if config.replay_method == 'gan':
-            train_gan_one_t(dhandlers[t], enc, dec, d_hnet, device, 
-                                                   config, writer, embd_list, t)
+            train_gan_one_t(dhandlers[t], enc, dec, d_hnet, device,
+                            config, writer, embd_list, t)
         else:
-            train_vae_one_t(dhandlers[t], enc, dec, d_hnet, device, 
-                                                   config, writer, embd_list, t)
-def run(config, train_system=True, only_train_replay=False, train_tandem=True):  
+            train_vae_one_t(dhandlers[t], enc, dec, d_hnet, device,
+                            config, writer, embd_list, t)
+
+
+def run(config, train_system=True, only_train_replay=False, train_tandem=True):
     """ Method to start training MNIST replay model. 
     Depending on the configurations, here we control the creation and 
     training of the different replay modules with their corresponding 
@@ -478,11 +482,11 @@ def run(config, train_system=True, only_train_replay=False, train_tandem=True):
     # data at once.
     # single class replay only implemented for splitMNIST
     if config.single_class_replay:
-        assert(config.experiment == "splitMNIST")
+        assert (config.experiment == "splitMNIST")
 
     if config.num_tasks > 100 and config.cl_scenario != 1:
         print("Attention: Replay model not tested for num tasks > 100")
-        
+
     ### Setup environment
     device, writer = train_utils._setup_environment(config)
 
@@ -494,39 +498,39 @@ def run(config, train_system=True, only_train_replay=False, train_tandem=True):
 
     ### Create tasks for split MNIST
     if train_system == False and config.upper_bound == False:
-        dhandlers =  None
+        dhandlers = None
     else:
         dhandlers = train_utils._generate_tasks(config, steps)
 
     ### Generate networks.
     if train_system == False:
-        enc, dec, d_hnet =  None, None, None
+        enc, dec, d_hnet = None, None, None
     else:
         if config.rp_beta > 0:
             create_rp_hnet = True
         else:
             create_rp_hnet = False
-        enc, dec, d_hnet = train_utils_replay.generate_replay_networks(config, 
-                                              dhandlers, device, create_rp_hnet, 
-                                            only_train_replay=only_train_replay)
+        enc, dec, d_hnet = train_utils_replay.generate_replay_networks(config,
+                                                                       dhandlers, device, create_rp_hnet,
+                                                                       only_train_replay=only_train_replay)
         ### Generate task prioirs for latent space.
         priors = []
         test_z = []
         vae_conds = []
-        
+
         ### Save some noise vectors for testing
-        
+
         for t in range(config.num_embeddings):
             # if conditional prior create some task priors and save them
             if config.conditional_prior:
-                mu = torch.zeros(( config.latent_dim)).to(device)
+                mu = torch.zeros((config.latent_dim)).to(device)
                 nn.init.normal_(mu, mean=0, std=1.)
-                mu = torch.stack([mu]*config.batch_size)
+                mu = torch.stack([mu] * config.batch_size)
                 mu.requires_grad = False
                 priors.append(mu)
             else:
-                mu = torch.zeros((config.batch_size, 
-                                             config.latent_dim)).to(device)
+                mu = torch.zeros((config.batch_size,
+                                  config.latent_dim)).to(device)
                 priors.append(None)
 
             ### Generate sampler for latent space.
@@ -535,7 +539,7 @@ def run(config, train_system=True, only_train_replay=False, train_tandem=True):
             sample = mu + eps
             sample.requires_grad = False
             test_z.append(sample)
-            
+
             # if vae has some conditional input, then either save hot-encodings
             # or some conditions from a gaussian
             if config.conditional_replay:
@@ -544,7 +548,7 @@ def run(config, train_system=True, only_train_replay=False, train_tandem=True):
                     vae_c[t] = 1
                 else:
                     nn.init.normal_(vae_c, mean=0, std=1.)
-                vae_c = torch.stack([vae_c]*config.batch_size)
+                vae_c = torch.stack([vae_c] * config.batch_size)
                 vae_c.requires_grad = False
                 vae_conds.append(vae_c)
 
@@ -558,15 +562,15 @@ def run(config, train_system=True, only_train_replay=False, train_tandem=True):
             ### Test network.
             test(enc, dec, d_hnet, device, config, writer)
 
-    return dec, d_hnet, enc, dhandlers, device, writer, config 
+    return dec, d_hnet, enc, dhandlers, device, writer, config
+
 
 if __name__ == '__main__':
-
     ### Get command line arguments.
     config = train_args_replay.parse_rp_cmd_arguments(mode='perm')
 
     ### run the scripts
-    dec, d_hnet, enc, dhandlers, device, writer, config  = \
-                        run(config, only_train_replay=True, train_tandem=False)   
+    dec, d_hnet, enc, dhandlers, device, writer, config = \
+        run(config, only_train_replay=True, train_tandem=False)
     writer.close()
     print('Program finished successfully.')

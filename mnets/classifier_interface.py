@@ -24,13 +24,15 @@ A general interface for main networks used in classification tasks. This
 abstract base class also provides a collection of static helper functions that
 are useful in classification problems.
 """
+from warnings import warn
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from warnings import warn
 
 from mnets.mnet_interface import MainNetInterface
+
 
 class Classifier(nn.Module, MainNetInterface):
     """A general interface for classification networks.
@@ -38,6 +40,7 @@ class Classifier(nn.Module, MainNetInterface):
     Attributes:
         num_classes: Number of output neurons.
     """
+
     def __init__(self, num_classes, verbose):
         """Initialize the network.
 
@@ -47,11 +50,11 @@ class Classifier(nn.Module, MainNetInterface):
                 network (such as number of weights).
         """
         # FIXME find a way using super to handle multiple inheritence.
-        #super(Classifier, self).__init__()
+        # super(Classifier, self).__init__()
         nn.Module.__init__(self)
         MainNetInterface.__init__(self)
 
-        assert(num_classes > 0)
+        assert (num_classes > 0)
         self._num_classes = num_classes
 
         self._verbose = verbose
@@ -78,7 +81,7 @@ class Classifier(nn.Module, MainNetInterface):
             Cross-entropy loss computed on logits h and labels extracted
             from target vector t.
         """
-        assert(t.shape[1] == h.shape[1])
+        assert (t.shape[1] == h.shape[1])
         targets = t.argmax(dim=1, keepdim=False)
         return F.cross_entropy(h, targets, reduction=reduction)
 
@@ -116,7 +119,7 @@ class Classifier(nn.Module, MainNetInterface):
         Returns:
             Knowledge Distillation (KD) loss.
         """
-        assert(target_mapping is None or device is not None)
+        assert (target_mapping is None or device is not None)
         targets = F.softmax(target_logits / T, dim=1)
         n_classes = logits.shape[1]
         n_targets = targets.shape[1]
@@ -130,8 +133,8 @@ class Classifier(nn.Module, MainNetInterface):
             new_targets[:, target_mapping] = targets
             targets = new_targets
 
-        return -(targets * F.log_softmax(logits / T,dim=1)).sum(dim=1).mean()*\
-               T**2
+        return -(targets * F.log_softmax(logits / T, dim=1)).sum(dim=1).mean() * \
+               T ** 2
 
     @staticmethod
     def softmax_and_cross_entropy(h, t, reduction_sum=False):
@@ -146,7 +149,7 @@ class Classifier(nn.Module, MainNetInterface):
         Returns:
             Cross-entropy loss computed on logits h and given targets t.
         """
-        assert(t.shape[1] == h.shape[1])
+        assert (t.shape[1] == h.shape[1])
 
         loss = -(t * torch.nn.functional.log_softmax(h, dim=1)).sum(dim=1)
 
@@ -168,7 +171,7 @@ class Classifier(nn.Module, MainNetInterface):
         Returns:
             Relative prediction accuracy on the given batch.
         """
-        assert(t.shape[1] == y.shape[1])
+        assert (t.shape[1] == y.shape[1])
         predictions = y.argmax(dim=1, keepdim=False)
         targets = t.argmax(dim=1, keepdim=False)
 
@@ -194,7 +197,6 @@ class Classifier(nn.Module, MainNetInterface):
 
         return np.sum([np.prod(l) for l in dims])
 
+
 if __name__ == '__main__':
     pass
-
-

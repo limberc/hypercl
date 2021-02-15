@@ -42,13 +42,13 @@ users may not change the code below this heading.
 
 grid = {
     'experiment': ["permutedMNIST"],
-    'cl_scenario': [1,2,3],
-    'num_tasks': [10,100],
+    'cl_scenario': [1, 2, 3],
+    'num_tasks': [10, 100],
     'infer_task_id': [True, False],
     'infer_with_entropy': [True, False],
-    'dont_set_default':[False],
+    'dont_set_default': [False],
     # FIXME this is due to latex error on leonhard cluster
-    'random_seed': [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    'random_seed': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 }
 
 """Parameter grid for grid search.
@@ -79,8 +79,8 @@ Note, that you can specify special :attr:`conditions` below.
 """
 
 conditions = [
-    ({'infer_with_entropy': [True], 'cl_scenario': [2,3]}, 
-                                                {'infer_task_id': [True]}),
+    ({'infer_with_entropy': [True], 'cl_scenario': [2, 3]},
+     {'infer_task_id': [True]}),
     # when the encoder does not output a softmax, then we have to enforce
     # that the latent space of the autoencoder is "related" to the task_embs
 ]
@@ -142,6 +142,7 @@ _SUMMARY_KEYWORDS = [
 # of the simulation.
 _OUT_ARG = 'out_dir'
 
+
 def _get_performance_summary(out_dir, cmd_ident):
     """See docstring of method
     :func:`hpsearch.hpsearch._get_performance_summary`.
@@ -154,12 +155,15 @@ def _get_performance_summary(out_dir, cmd_ident):
     """
     pass
 
+
 # In case you need a more elaborate parser than the default one define by the
 # function :func:`hpsearch.hpsearch._get_performance_summary`, you can pass a
 # function handle to this attribute.
 # Value `None` results in the usage of the default parser.
-_SUMMARY_PARSER_HANDLE = None # Default parser is used.
-#_SUMMARY_PARSER_HANDLE = _get_performance_summary # Custom parser is used.
+_SUMMARY_PARSER_HANDLE = None  # Default parser is used.
+
+
+# _SUMMARY_PARSER_HANDLE = _get_performance_summary # Custom parser is used.
 
 def _performance_criteria(summary_dict, performance_criteria):
     """Evaluate whether a run meets a given performance criteria.
@@ -183,16 +187,17 @@ def _performance_criteria(summary_dict, performance_criteria):
 
     raise NotImplementedError('TODO implement')
 
+
 # A function handle, that is used to evaluate the performance of a run.
 _PERFORMANCE_EVAL_HANDLE = None
-#_PERFORMANCE_EVAL_HANDLE = _performance_criteria
+# _PERFORMANCE_EVAL_HANDLE = _performance_criteria
 
 # A key that must appear in the `_SUMMARY_KEYWORDS` list. If `None`, the first
 # entry in this list will be selected.
 # The CSV file will be sorted based on this keyword. See also attribute
 # `_PERFORMANCE_SORT_ASC`.
 _PERFORMANCE_KEY = None
-assert(_PERFORMANCE_KEY is None or _PERFORMANCE_KEY in _SUMMARY_KEYWORDS)
+assert (_PERFORMANCE_KEY is None or _PERFORMANCE_KEY in _SUMMARY_KEYWORDS)
 # Whether the CSV should be sorted ascending or descending based on the
 # `_PERFORMANCE_KEY`.
 _PERFORMANCE_SORT_ASC = False
@@ -211,5 +216,3 @@ _ARGPARSE_HANDLE = None
 
 if __name__ == '__main__':
     pass
-
-

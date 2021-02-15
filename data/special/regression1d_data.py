@@ -28,13 +28,15 @@ CL toy regression problem. The user can construct individual datasets with this
 data handler and use each of these datasets to train a model in a continual
 leraning setting.
 """
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import cm
 from warnings import warn
 
-from utils import misc
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.pyplot import cm
+
 from data.dataset import Dataset
+from utils import misc
+
 
 class ToyRegression(Dataset):
     """An instance of this class shall represent a simple regression task.
@@ -44,9 +46,10 @@ class ToyRegression(Dataset):
         test_x_range: The input range for test samples.
         val_x_range: The input range for validation samples.
     """
+
     def __init__(self, train_inter=[-10, 10], num_train=20,
                  test_inter=[-10, 10], num_test=80, val_inter=None,
-                 num_val=None, map_function=lambda x : x, std=0, rseed=None):
+                 num_val=None, map_function=lambda x: x, std=0, rseed=None):
         """Generate a new dataset.
 
         The input data x will be uniformly drawn for train samples and
@@ -76,8 +79,8 @@ class ToyRegression(Dataset):
         """
         super().__init__()
 
-        assert(val_inter is None and num_val is None or \
-               val_inter is not None and num_val is not None)
+        assert (val_inter is None and num_val is None or \
+                val_inter is not None and num_val is not None)
 
         if rseed is None:
             rand = np.random
@@ -168,7 +171,7 @@ class ToyRegression(Dataset):
 
         slack_x = 0.05 * (max_x - min_x)
 
-        sample_x = np.linspace(start=min_x-slack_x, stop=max_x+slack_x,
+        sample_x = np.linspace(start=min_x - slack_x, stop=max_x + slack_x,
                                num=num_samples).reshape((num_samples, 1))
         sample_y = self._map(sample_x)
 
@@ -225,7 +228,7 @@ class ToyRegression(Dataset):
         """
         train_x = self.get_train_inputs().squeeze()
         train_y = self.get_train_outputs().squeeze()
-        
+
         test_x = self.get_test_inputs().squeeze()
         test_y = self.get_test_outputs().squeeze()
 
@@ -277,7 +280,7 @@ class ToyRegression(Dataset):
             figsize: A tuple, determining the size of the
                 figure in inches.
         """
-        assert( outputs is not None or predictions is not None)
+        assert (outputs is not None or predictions is not None)
 
         plt.figure(figsize=figsize)
         plt.title(title, size=20)
@@ -331,15 +334,15 @@ class ToyRegression(Dataset):
             publication_style: Whether the plots should be in publication style.
         """
         n = len(data_handlers)
-        assert((inputs is None and predictions is None) or \
-               (inputs is not None and predictions is not None))
-        assert((inputs is None or len(inputs) == n) and \
-               (predictions is None or len(predictions) == n) and \
-               (labels is None or len(labels) == n))
-        assert(fun_xranges is None or len(fun_xranges) == n)
+        assert ((inputs is None and predictions is None) or \
+                (inputs is not None and predictions is not None))
+        assert ((inputs is None or len(inputs) == n) and \
+                (predictions is None or len(predictions) == n) and \
+                (labels is None or len(labels) == n))
+        assert (fun_xranges is None or len(fun_xranges) == n)
 
         # Set-up matplotlib to adhere to our graphical conventions.
-        #misc.configure_matplotlib_params(fig_size=1.2*np.array([1.6, 1]),
+        # misc.configure_matplotlib_params(fig_size=1.2*np.array([1.6, 1]),
         #                                 font_size=8)
 
         # Get a colorscheme from colorbrewer2.org.
@@ -350,7 +353,7 @@ class ToyRegression(Dataset):
             colors = cm.rainbow(np.linspace(0, 1, n))
 
         if publication_style:
-            ts, lw, ms = 60, 15, 140 # text fontsize, line width, marker size
+            ts, lw, ms = 60, 15, 140  # text fontsize, line width, marker size
             figsize = (12, 6)
         else:
             ts, lw, ms = 12, 2, 15
@@ -372,13 +375,13 @@ class ToyRegression(Dataset):
                 fun_xrange = fun_xranges[i]
             sample_x, sample_y = data._get_function_vals(x_range=fun_xrange)
             p, = plt.plot(sample_x, sample_y, color=colors[i],
-                          linestyle='dashed', linewidth=lw/3)
+                          linestyle='dashed', linewidth=lw / 3)
 
             phandlers.append(p)
             plabels.append(lbl)
             if inputs is not None:
                 p = plt.scatter(inputs[i], predictions[i], color=colors[i],
-                    s=ms)
+                                s=ms)
                 phandlers.append(p)
                 plabels.append('Predictions')
 
@@ -387,15 +390,15 @@ class ToyRegression(Dataset):
             axes.set_facecolor('w')
             axes.axhline(y=axes.get_ylim()[0], color='k', lw=lw)
             axes.axvline(x=axes.get_xlim()[0], color='k', lw=lw)
-            if len(data_handlers)==3:
+            if len(data_handlers) == 3:
                 plt.yticks([-1, 0, 1], fontsize=ts)
                 plt.xticks([-2.5, 0, 2.5], fontsize=ts)
             else:
                 for tick in axes.yaxis.get_major_ticks():
-                    tick.label.set_fontsize(ts) 
+                    tick.label.set_fontsize(ts)
                 for tick in axes.xaxis.get_major_ticks():
-                    tick.label.set_fontsize(ts) 
-            axes.tick_params(axis='both', length=lw, direction='out', width=lw/2.)
+                    tick.label.set_fontsize(ts)
+            axes.tick_params(axis='both', length=lw, direction='out', width=lw / 2.)
         else:
             plt.legend(phandlers, plabels)
 
@@ -404,13 +407,12 @@ class ToyRegression(Dataset):
         plt.tight_layout()
 
         if filename is not None:
-            #plt.savefig(filename + '.pdf', bbox_inches='tight')
+            # plt.savefig(filename + '.pdf', bbox_inches='tight')
             plt.savefig(filename, bbox_inches='tight')
 
         if show:
             plt.show()
 
+
 if __name__ == '__main__':
     pass
-
-

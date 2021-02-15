@@ -28,6 +28,7 @@ import logging
 import os
 import sys
 
+
 def config_logger(name, log_file, file_level, console_level):
     """Configure the logger that should be used by all modules in this
     package.
@@ -52,10 +53,10 @@ def config_logger(name, log_file, file_level, console_level):
         The configured logger.
     """
     file_formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s' \
-                                       + ' - %(module)s - %(message)s', \
+                                           + ' - %(module)s - %(message)s', \
                                        datefmt='%m/%d/%Y %I:%M:%S %p')
     stream_formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s' \
-                                         + ' - %(message)s', \
+                                             + ' - %(message)s', \
                                          datefmt='%m/%d/%Y %I:%M:%S %p')
 
     if log_file is not None:
@@ -79,6 +80,7 @@ def config_logger(name, log_file, file_level, console_level):
     logger.addHandler(stream_handler)
 
     return logger
+
 
 if __name__ == '__main__':
     pass

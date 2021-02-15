@@ -19,12 +19,13 @@ Note, that we use this code WITHOUT ANY WARRANTIES.
 
 The code was slightly modified to fit our purposes.
 """
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 from utils.misc import init_params
+
 
 class SelfAttnLayer(nn.Module):
     """Self-Attention Layer
@@ -37,6 +38,7 @@ class SelfAttnLayer(nn.Module):
     The goal is to capture global correlations in convolutional networks (such
     as generators and discriminators in GANs).
     """
+
     def __init__(self, in_dim, use_spectral_norm):
         """Initialize self-attention layer.
 
@@ -45,11 +47,11 @@ class SelfAttnLayer(nn.Module):
             use_spectral_norm: Enable spectral normalization for all 1x1 conv.
                 layers.
         """
-        super(SelfAttnLayer,self).__init__()
+        super(SelfAttnLayer, self).__init__()
         self.channel_in = in_dim
 
         # 1x1 convolution to generate f(x).
-        self.query_conv = nn.Conv2d(in_channels=in_dim ,
+        self.query_conv = nn.Conv2d(in_channels=in_dim,
                                     out_channels=in_dim // 8, kernel_size=1)
         # 1x1 convolution to generate g(x).
         self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim // 8,
@@ -72,7 +74,7 @@ class SelfAttnLayer(nn.Module):
             self.key_conv = nn.utils.spectral_norm(self.key_conv)
             self.value_conv = nn.utils.spectral_norm(self.value_conv)
 
-        self.softmax  = nn.Softmax(dim=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, ret_attention=False):
         """Compute and apply attention map to mix global information into local
@@ -92,21 +94,21 @@ class SelfAttnLayer(nn.Module):
         m_batchsize, C, width, height = x.size()
 
         # Compute f(x)^T, shape: B x N x C//8.
-        proj_query  = self.query_conv(x).view(m_batchsize,-1, width*height).\
-            permute(0,2,1)
+        proj_query = self.query_conv(x).view(m_batchsize, -1, width * height). \
+            permute(0, 2, 1)
         # Compute g(x), shape: B x C//8 x N.
-        proj_key =  self.key_conv(x).view(m_batchsize, -1, width*height)
-        energy =  torch.bmm(proj_query, proj_key) # f(x)^T g(x)
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)
+        energy = torch.bmm(proj_query, proj_key)  # f(x)^T g(x)
         # We compute the softmax per column of "energy" -> columns should sum
         # up to 1.
-        attention = self.softmax(energy) # shape: B x N x N
+        attention = self.softmax(energy)  # shape: B x N x N
         # Compute h(x), shape: B x C x N.
-        proj_value = self.value_conv(x).view(m_batchsize, -1, width*height)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)
 
         # Compute h(x) * beta (equation 2 in the paper).
         # FIXME I am sure that taking the tranpose of "attention" is wrong, as
         # the columns (not rows) of "attention" sum to 1.
-        out = torch.bmm(proj_value, attention.permute(0,2,1))
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
         out = out.view(m_batchsize, C, width, height)
 
         out = self.gamma * out + x
@@ -114,6 +116,7 @@ class SelfAttnLayer(nn.Module):
         if ret_attention:
             return out, attention
         return out
+
 
 class SelfAttnLayerV2(nn.Module):
     """Self-Attention Layer with weights maintained seperately. Hence, this
@@ -136,6 +139,7 @@ class SelfAttnLayerV2(nn.Module):
             set in the constructor).
         weights: A list of parameter tensors (all parameters in this layer).
     """
+
     def __init__(self, in_dim, use_spectral_norm, no_weights=False,
                  init_weights=None):
         """Initialize self-attention layer.
@@ -155,15 +159,15 @@ class SelfAttnLayerV2(nn.Module):
                 See attribute "weight_shapes" for the format in which parameters
                 should be passed.
         """
-        super(SelfAttnLayerV2,self).__init__()
-        assert(not no_weights or init_weights is None)
+        super(SelfAttnLayerV2, self).__init__()
+        assert (not no_weights or init_weights is None)
         if use_spectral_norm:
             raise NotImplementedError('Spectral norm not yet implemented ' +
                                       'for this layer type.')
 
         self.channel_in = in_dim
 
-        self.softmax  = nn.Softmax(dim=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         # 1x1 convolution to generate f(x).
         query_dim = [in_dim // 8, in_dim, 1, 1]
@@ -176,7 +180,7 @@ class SelfAttnLayerV2(nn.Module):
                                key_dim, [key_dim[0]],
                                value_dim, [value_dim[0]],
                                gamma_dim
-                              ]
+                               ]
 
         if no_weights:
             self._weights = None
@@ -190,15 +194,15 @@ class SelfAttnLayerV2(nn.Module):
                                               requires_grad=True))
 
         if init_weights is not None:
-            assert(len(init_weights) == len(self._weight_shapes))
-            
+            assert (len(init_weights) == len(self._weight_shapes))
+
             for i in range(len(init_weights)):
-                assert(np.all(np.equal(list(init_weights[i].shape),
-                                       list(self._weights[i].shape))))
+                assert (np.all(np.equal(list(init_weights[i].shape),
+                                        list(self._weights[i].shape))))
                 self._weights[i].data = init_weights[i]
         else:
-            for i in range(0, len(self._weights)-1, 2):
-                init_params(self._weights[i], self._weights[i+1])
+            for i in range(0, len(self._weights) - 1, 2):
+                init_params(self._weights[i], self._weights[i + 1])
             # This gamma parameter is on purpose initialized to be zero as
             # described in the paper.
             nn.init.constant_(self._weights[-1], 0)
@@ -246,10 +250,10 @@ class SelfAttnLayerV2(nn.Module):
         if weights is None:
             weights = self.weights
         else:
-            assert(len(weights) == len(self.weight_shapes))
+            assert (len(weights) == len(self.weight_shapes))
 
         if dWeights is not None:
-            assert(len(dWeights) == len(self.weight_shapes))
+            assert (len(dWeights) == len(self.weight_shapes))
 
             new_weights = []
             for i, w in enumerate(weights):
@@ -260,22 +264,22 @@ class SelfAttnLayerV2(nn.Module):
 
         # Compute f(x)^T, shape: B x N x C//8.
         proj_query = F.conv2d(x, weights[0], bias=weights[1]). \
-            view(m_batchsize,-1, width*height).permute(0,2,1)
+            view(m_batchsize, -1, width * height).permute(0, 2, 1)
         # Compute g(x), shape: B x C//8 x N.
         proj_key = F.conv2d(x, weights[2], bias=weights[3]). \
-            view(m_batchsize, -1, width*height)
-        energy =  torch.bmm(proj_query, proj_key) # f(x)^T g(x)
+            view(m_batchsize, -1, width * height)
+        energy = torch.bmm(proj_query, proj_key)  # f(x)^T g(x)
         # We compute the softmax per column of "energy" -> columns should sum
         # up to 1.
-        attention = self.softmax(energy) # shape: B x N x N
+        attention = self.softmax(energy)  # shape: B x N x N
         # Compute h(x), shape: B x C x N.
         proj_value = F.conv2d(x, weights[4], bias=weights[5]). \
-            view(m_batchsize, -1, width*height)
+            view(m_batchsize, -1, width * height)
 
         # Compute h(x) * beta (equation 2 in the paper).
         # FIXME I am sure that taking the tranpose of "attention" is wrong, as
         # the columns (not rows) of "attention" sum to 1.
-        out = torch.bmm(proj_value, attention.permute(0,2,1))
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
         out = out.view(m_batchsize, C, width, height)
 
         out = weights[6] * out + x
@@ -284,7 +288,6 @@ class SelfAttnLayerV2(nn.Module):
             return out, attention
         return out
 
+
 if __name__ == '__main__':
     pass
-
-

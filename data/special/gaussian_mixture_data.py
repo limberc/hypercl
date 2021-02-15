@@ -39,12 +39,13 @@ In the case of small variances, the task can be detected from seeing the input x
 alone. This allows us to predict task embeddings based on inputs, such that
 there is no need to define the task embedding manually.
 """
-import numpy as np
-from scipy.stats import multivariate_normal
 import itertools
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.pyplot import cm
 from scipy.spatial import cKDTree
+from scipy.stats import multivariate_normal
 
 from data.dataset import Dataset
 
@@ -52,21 +53,22 @@ from data.dataset import Dataset
 #   https://git.io/fjZlv
 DEFAULT_MEANS = [np.array([i, j]) for i, j in
                  itertools.product(range(-4, 5, 2), range(-4, 5, 2))]
-DEFAULT_VARIANCES = [0.05**2 * np.eye(len(mean)) for mean in DEFAULT_MEANS]
+DEFAULT_VARIANCES = [0.05 ** 2 * np.eye(len(mean)) for mean in DEFAULT_MEANS]
 
 ### Here are a few other configurations used in papers.
 # https://arxiv.org/pdf/1611.02163.pdf
-METZ_ANGLES = [i/8 * 2 * np.pi for i in range(8)]
+METZ_ANGLES = [i / 8 * 2 * np.pi for i in range(8)]
 METZ_MEANS = [np.array([2. * np.sin(a), 2. * np.cos(a)]) for a in METZ_ANGLES]
-METZ_VARIANCES = [0.02**2 * np.eye(len(mean)) for mean in METZ_MEANS]
+METZ_VARIANCES = [0.02 ** 2 * np.eye(len(mean)) for mean in METZ_MEANS]
 
 # https://arxiv.org/pdf/1612.02136.pdf
-CHE_ANGLES = [(i+0.5)/6 * 2 * np.pi for i in range(6)]
+CHE_ANGLES = [(i + 0.5) / 6 * 2 * np.pi for i in range(6)]
 CHE_MEANS = [np.array([5. * np.sin(a), 5. * np.cos(a)]) for a in CHE_ANGLES]
-CHE_VARIANCES = [0.1**2 * np.eye(len(mean)) for mean in CHE_MEANS]
+CHE_VARIANCES = [0.1 ** 2 * np.eye(len(mean)) for mean in CHE_MEANS]
+
 
 def get_gmm_tasks(means=DEFAULT_MEANS, covs=DEFAULT_VARIANCES, num_train=100,
-                 num_test=100, map_functions=None, rseed=None):
+                  num_test=100, map_functions=None, rseed=None):
     """Generate a set of data handlers (one for each task) of class
     :class:`GaussianData`.
 
@@ -83,19 +85,20 @@ def get_gmm_tasks(means=DEFAULT_MEANS, covs=DEFAULT_VARIANCES, num_train=100,
     Returns:
         (list): A list of objects of class :class:`GaussianData`.
     """
-    assert(len(means) == len(covs))
+    assert (len(means) == len(covs))
 
     if map_functions is None:
         map_functions = [None] * len(means)
     else:
-        assert(len(map_functions) == len(means))
+        assert (len(map_functions) == len(means))
 
     ret = []
     for i in range(len(means)):
         ret.append(GaussianData(mean=means[i], cov=covs[i], num_train=num_train,
-            num_test=num_test, map_function=map_functions[i], rseed=rseed))
+                                num_test=num_test, map_function=map_functions[i], rseed=rseed))
 
     return ret
+
 
 class GaussianData(Dataset):
     """An instance of this class shall represent a regression task where the
@@ -109,7 +112,8 @@ class GaussianData(Dataset):
         mean: Mean vector.
         cov: Covariance matrix.
     """
-    def __init__(self, mean=np.array([0, 0]), cov=0.05**2 * np.eye(2),
+
+    def __init__(self, mean=np.array([0, 0]), cov=0.05 ** 2 * np.eye(2),
                  num_train=100, num_test=100, map_function=None, rseed=None):
         """Generate a new dataset.
 
@@ -137,13 +141,13 @@ class GaussianData(Dataset):
             rand = np.random.RandomState(rseed)
 
         n_x = mean.size
-        assert(n_x == 2) # Only required when using plotting functions.
+        assert (n_x == 2)  # Only required when using plotting functions.
 
         train_x = rand.multivariate_normal(mean, cov, size=num_train)
         test_x = rand.multivariate_normal(mean, cov, size=num_test)
 
         if map_function is None:
-            map_function = lambda x : multivariate_normal.pdf(x, mean, cov). \
+            map_function = lambda x: multivariate_normal.pdf(x, mean, cov). \
                 reshape(-1, 1)
 
             # f(x) = p(x)
@@ -211,7 +215,7 @@ class GaussianData(Dataset):
             figsize: A tuple, determining the size of the
                 figure in inches.
         """
-        assert(outputs is not None or predictions is not None)
+        assert (outputs is not None or predictions is not None)
 
         plt.figure(figsize=figsize)
         plt.title(title, size=20)
@@ -224,12 +228,12 @@ class GaussianData(Dataset):
 
         if outputs is not None:
             plt.scatter(inputs[:, 0], inputs[:, 1], edgecolors='b',
-                label='Targets',
-                facecolor=f.cmap(f.norm(outputs.squeeze())))
+                        label='Targets',
+                        facecolor=f.cmap(f.norm(outputs.squeeze())))
         if predictions is not None:
             plt.scatter(inputs[:, 0], inputs[:, 1], edgecolors='r',
-                label='Predictions',
-                facecolor=f.cmap(f.norm(predictions.squeeze())))
+                        label='Predictions',
+                        facecolor=f.cmap(f.norm(predictions.squeeze())))
         plt.legend()
         plt.xlabel('x1')
         plt.ylabel('x2')
@@ -250,7 +254,7 @@ class GaussianData(Dataset):
 
     def plot_dataset(self):
         """Plot the whole dataset."""
-        
+
         fig, ax = plt.subplots()
         train_x = self.get_train_inputs()
         train_y = self.get_train_outputs().squeeze()
@@ -262,9 +266,9 @@ class GaussianData(Dataset):
         heatmap = plt.contourf(X1, X2, Y)
         plt.colorbar(heatmap)
 
-        #plt.scatter(train_x[:, 0], train_x[:, 1], edgecolors='r', label='Train',
+        # plt.scatter(train_x[:, 0], train_x[:, 1], edgecolors='r', label='Train',
         #            facecolors='none')
-        #plt.scatter(test_x[:, 0], test_x[:, 1], edgecolors='b', label='Test',
+        # plt.scatter(test_x[:, 0], test_x[:, 1], edgecolors='b', label='Test',
         #            facecolors='none')
 
         # In case outputs might be noisy, we draw facecolors to match the
@@ -303,8 +307,8 @@ class GaussianData(Dataset):
                  np.abs(test_x - mu[None, :]).max())
         dx = 1.05 * dx
 
-        x1 = np.linspace(start=mu[0]-dx, stop=mu[0]+dx, num=grid_size)
-        x2 = np.linspace(start=mu[1]-dx, stop=mu[1]+dx, num=grid_size)
+        x1 = np.linspace(start=mu[0] - dx, stop=mu[0] + dx, num=grid_size)
+        x2 = np.linspace(start=mu[1] - dx, stop=mu[1] + dx, num=grid_size)
 
         X1, X2 = np.meshgrid(x1, x2)
 
@@ -328,7 +332,7 @@ class GaussianData(Dataset):
         """
         train_x = self.get_train_inputs()
         train_y = self.get_train_outputs().squeeze()
-        
+
         test_x = self.get_test_inputs()
         test_y = self.get_test_outputs().squeeze()
 
@@ -338,12 +342,12 @@ class GaussianData(Dataset):
 
         if show_train:
             plt.scatter(train_x[:, 0], train_x[:, 1], edgecolors='r',
-                label='Train', facecolor=f.cmap(f.norm(train_y.squeeze())))
+                        label='Train', facecolor=f.cmap(f.norm(train_y.squeeze())))
         if show_test:
             plt.scatter(test_x[:, 0], test_x[:, 1], edgecolors='b',
-                label='Test', facecolor=f.cmap(f.norm(test_y.squeeze())))
+                        label='Test', facecolor=f.cmap(f.norm(test_y.squeeze())))
         plt.scatter(predictions[0][:, 0], predictions[0][:, 1], edgecolors='g',
-                label=label, facecolor=f.cmap(f.norm(predictions[1].squeeze())))
+                    label=label, facecolor=f.cmap(f.norm(predictions[1].squeeze())))
         plt.legend()
         plt.title('Gaussian Input Dataset')
         plt.xlabel('x1')
@@ -369,14 +373,14 @@ class GaussianData(Dataset):
                 figure in inches.
         """
         n = len(data_handlers)
-        assert((inputs is None and predictions is None) or \
-               (inputs is not None and predictions is not None))
-        assert((inputs is None or len(inputs) == n) and \
-               (predictions is None or len(predictions) == n) and \
-               (labels is None or len(labels) == n))
+        assert ((inputs is None and predictions is None) or \
+                (inputs is not None and predictions is not None))
+        assert ((inputs is None or len(inputs) == n) and \
+                (predictions is None or len(predictions) == n) and \
+                (labels is None or len(labels) == n))
 
         fig, ax = plt.subplots(figsize=figsize)
-        #plt.figure(figsize=figsize)
+        # plt.figure(figsize=figsize)
         plt.title('GaussianMixture tasks', size=20)
 
         # We need to produce a heatmap that spans all tasks.
@@ -389,7 +393,7 @@ class GaussianData(Dataset):
             test_x = data.get_test_inputs()
             mu = data._mean
 
-            #dx = np.abs(np.vstack([train_x, test_x]) - mu[None, :]).max(axis=0)
+            # dx = np.abs(np.vstack([train_x, test_x]) - mu[None, :]).max(axis=0)
             dx = max(np.abs(train_x - mu[None, :]).max(),
                      np.abs(test_x - mu[None, :]).max())
 
@@ -425,9 +429,9 @@ class GaussianData(Dataset):
         means = [d._mean for d in data_handlers]
 
         # Plot Voronoi diagram for debugging.
-        #from scipy.spatial import Voronoi, voronoi_plot_2d
-        #vor = Voronoi(means)
-        #voronoi_plot_2d(vor)
+        # from scipy.spatial import Voronoi, voronoi_plot_2d
+        # vor = Voronoi(means)
+        # voronoi_plot_2d(vor)
 
         vor_tree = cKDTree(means)
         _, minds = vor_tree.query(X)
@@ -456,8 +460,8 @@ class GaussianData(Dataset):
 
             if inputs is not None:
                 p = plt.scatter(inputs[i][:, 0], inputs[i][:, 1],
-                    edgecolors=colors[i],
-                    facecolor=f.cmap(f.norm(predictions[i].squeeze())))
+                                edgecolors=colors[i],
+                                facecolor=f.cmap(f.norm(predictions[i].squeeze())))
                 phandlers.append(p)
                 plabels.append(lbl)
 
@@ -476,5 +480,3 @@ class GaussianData(Dataset):
 
 if __name__ == '__main__':
     pass
-
-

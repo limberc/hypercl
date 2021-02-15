@@ -31,18 +31,20 @@ hypernet to solve a CIFAR continual learning problem.
     :mod:`cifar.train_zenke`.
 """
 from argparse import Namespace
+from time import time
+
+import numpy as np
 import torch
 import torch.optim as optim
 from torch.nn import functional as F
-import numpy as np
-from time import time
 
+import utils.hnet_regularizer as hreg
+import utils.optim_step as opstep
 from cifar import train_utils as tutils
 from mnets.classifier_interface import Classifier
 from utils import sim_utils as sutils
-import utils.optim_step as opstep
-import utils.hnet_regularizer as hreg
 from utils.torch_utils import get_optimizer
+
 
 def test(task_id, data, mnet, hnet, device, shared, config, writer, logger,
          train_iter=None, task_emb=None, cl_scenario=None, test_size=None):
@@ -83,7 +85,7 @@ def test(task_id, data, mnet, hnet, device, shared, config, writer, logger,
     if cl_scenario is None:
         cl_scenario = config.cl_scenario
     else:
-        assert cl_scenario in [1,2,3]
+        assert cl_scenario in [1, 2, 3]
 
     # `task_emb` ignored for other cl scenarios!
     assert task_emb is None or cl_scenario == 1, \
@@ -172,33 +174,33 @@ def test(task_id, data, mnet, hnet, device, shared, config, writer, logger,
 
             if config.cl_scenario == 1:
                 # Select current head.
-                task_out = [task_id*n_head, (task_id+1)*n_head]
+                task_out = [task_id * n_head, (task_id + 1) * n_head]
             elif config.cl_scenario == 2:
                 # Only 1 output head.
                 task_out = [0, n_head]
             else:
                 raise NotImplementedError()
                 # TODO Choose the predicted output head per sample.
-                #task_out = [predicted_task_id[0]*n_head,
+                # task_out = [predicted_task_id[0]*n_head,
                 #            (predicted_task_id[0]+1)*n_head]
 
             Y_hat_logits = Y_hat_logits[:, task_out[0]:task_out[1]]
             # We take the softmax after the output neurons are chosen.
             Y_hat = F.softmax(Y_hat_logits, dim=1).cpu().numpy()
 
-            correct_labels[N_processed-curr_bs:N_processed] = \
+            correct_labels[N_processed - curr_bs:N_processed] = \
                 T.argmax(dim=1, keepdim=False).cpu().numpy()
 
-            pred_labels[N_processed-curr_bs:N_processed] = \
+            pred_labels[N_processed - curr_bs:N_processed] = \
                 Y_hat.argmax(axis=1)
 
             # Set task prediction to 100% if we do not infer it.
             if cl_scenario > 1:
                 raise NotImplementedError()
-                #pred_tasks[N_processed-curr_bs:N_processed] = \
+                # pred_tasks[N_processed-curr_bs:N_processed] = \
                 #    predicted_task_id.cpu().numpy()
             else:
-                pred_tasks[N_processed-curr_bs:N_processed] = task_id
+                pred_tasks[N_processed - curr_bs:N_processed] = task_id
 
             # Note, targets are 1-hot encoded.
             test_loss += Classifier.logit_cross_entropy_loss(Y_hat_logits, T,
@@ -212,14 +214,14 @@ def test(task_id, data, mnet, hnet, device, shared, config, writer, logger,
 
         test_loss /= test_size
 
-        msg = '### Test accuracy of task %d' % (task_id+1) \
-            + (' (before training iteration %d)' % train_iter if \
-               train_iter is not None else '') \
-            + ': %.3f' % (test_acc) \
-            + (' (using a given task embedding)' if task_emb is not None \
-               else '') \
-            + (' - task prediction accuracy: %.3f' % task_acc if \
-               cl_scenario > 1 else '')
+        msg = '### Test accuracy of task %d' % (task_id + 1) \
+              + (' (before training iteration %d)' % train_iter if \
+                     train_iter is not None else '') \
+              + ': %.3f' % (test_acc) \
+              + (' (using a given task embedding)' if task_emb is not None \
+                     else '') \
+              + (' - task prediction accuracy: %.3f' % task_acc if \
+                     cl_scenario > 1 else '')
         logger.info(msg)
 
         if train_iter is not None:
@@ -231,6 +233,7 @@ def test(task_id, data, mnet, hnet, device, shared, config, writer, logger,
                                   task_id, task_acc, train_iter)
 
         return test_acc, task_acc
+
 
 def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
     """Train the hyper network using the task-specific loss plus a regularizer
@@ -264,30 +267,30 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
     if hnet is not None:
         theta_params = list(hnet.theta)
         if config.continue_emb_training:
-            for i in range(task_id): # for all previous task embeddings
+            for i in range(task_id):  # for all previous task embeddings
                 theta_params.append(hnet.get_task_emb(i))
 
         # Only for the current task embedding.
         # Important that this embedding is in a different optimizer in case
         # we use the lookahead.
         emb_optimizer = get_optimizer([hnet.get_task_emb(task_id)],
-            config.lr, momentum=config.momentum,
-            weight_decay=config.weight_decay, use_adam=config.use_adam,
-            adam_beta1=config.adam_beta1, use_rmsprop=config.use_rmsprop)
+                                      config.lr, momentum=config.momentum,
+                                      weight_decay=config.weight_decay, use_adam=config.use_adam,
+                                      adam_beta1=config.adam_beta1, use_rmsprop=config.use_rmsprop)
     else:
         theta_params = mnet.weights
         emb_optimizer = None
 
     theta_optimizer = get_optimizer(theta_params, config.lr,
-        momentum=config.momentum, weight_decay=config.weight_decay,
-        use_adam=config.use_adam, adam_beta1=config.adam_beta1,
-        use_rmsprop=config.use_rmsprop)
+                                    momentum=config.momentum, weight_decay=config.weight_decay,
+                                    use_adam=config.use_adam, adam_beta1=config.adam_beta1,
+                                    use_rmsprop=config.use_rmsprop)
 
     ################################
     ### Learning rate schedulers ###
     ################################
     if config.plateau_lr_scheduler:
-        assert(config.epochs != -1)
+        assert (config.epochs != -1)
         # The scheduler config has been taken from here:
         # https://keras.io/examples/cifar10_resnet/
         # Note, we use 'max' instead of 'min' as we look at accuracy rather
@@ -302,7 +305,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
                 min_lr=0.5e-6, cooldown=0)
 
     if config.lambda_lr_scheduler:
-        assert(config.epochs != -1)
+        assert (config.epochs != -1)
 
         def lambda_lr(epoch):
             """Multiplicative Factor for Learning Rate Schedule.
@@ -343,7 +346,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
     ##############################
     # Whether we will calculate the regularizer.
     calc_reg = task_id > 0 and not config.mnet_only and config.beta > 0 and \
-        not config.train_from_scratch
+               not config.train_from_scratch
 
     # Compute targets when the reg is activated and we are not training
     # the first task
@@ -368,7 +371,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
         if config.cl_scenario != 2:
             # FIXME We assume here that all tasks have the same output size.
             n_y = data.num_classes
-            regged_outputs = [list(range(i*n_y, (i+1)*n_y)) for i in
+            regged_outputs = [list(range(i * n_y, (i + 1) * n_y)) for i in
                               range(task_id)]
 
     # We need to tell the main network, which batch statistics to use, in case
@@ -391,7 +394,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
     if config.epochs == -1:
         training_iterations = config.n_iter
     else:
-        assert(config.epochs > 0)
+        assert (config.epochs > 0)
         iter_per_epoch = int(np.ceil(data.num_train_samples / \
                                      config.batch_size))
         training_iterations = config.epochs * iter_per_epoch
@@ -429,13 +432,13 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
         n_y = data.num_classes
         if config.cl_scenario == 1:
             # Choose current head.
-            task_out = [task_id*n_y, (task_id+1)*n_y]
+            task_out = [task_id * n_y, (task_id + 1) * n_y]
         elif config.cl_scenario == 2:
             # Always all output neurons, only one head is used.
             task_out = [0, n_y]
         else:
             # Choose current head, which will be inferred during inference.
-            task_out = [task_id*n_y, (task_id+1)*n_y]
+            task_out = [task_id * n_y, (task_id + 1) * n_y]
 
         ########################
         ### Loss computation ###
@@ -448,14 +451,14 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
 
         # Restrict output neurons
         Y_hat_logits = Y_hat_logits[:, task_out[0]:task_out[1]]
-        assert(T.shape[1] == Y_hat_logits.shape[1])
+        assert (T.shape[1] == Y_hat_logits.shape[1])
         # compute loss on task and compute gradients
         if config.soft_targets:
             soft_label = 0.95
             num_classes = data.num_classes
             soft_targets = torch.where(T == 1,
-                torch.Tensor([soft_label]),
-                torch.Tensor([(1 - soft_label) / (num_classes-1)]))
+                                       torch.Tensor([soft_label]),
+                                       torch.Tensor([(1 - soft_label) / (num_classes - 1)]))
             soft_targets = soft_targets.to(device)
             loss_task = Classifier.softmax_and_cross_entropy(Y_hat_logits,
                                                              soft_targets)
@@ -465,7 +468,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
         # Compute gradients based on task loss (those might be used in the CL
         # regularizer).
         loss_task.backward(retain_graph=calc_reg, create_graph=calc_reg and \
-                           config.backprop_dt)
+                                                               config.backprop_dt)
 
         # The current task embedding only depends in the task loss, so we can
         # update it already.
@@ -484,7 +487,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
                 dTheta = None
             else:
                 dTheta = opstep.calc_delta_theta(theta_optimizer, False,
-                    lr=config.lr, detach_dt=not config.backprop_dt)
+                                                 lr=config.lr, detach_dt=not config.backprop_dt)
 
                 if config.continue_emb_training:
                     dTembs = dTheta[-task_id:]
@@ -493,10 +496,10 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
                     dTembs = None
 
             loss_reg = hreg.calc_fix_target_reg(hnet, task_id,
-                targets=targets_hypernet, dTheta=dTheta, dTembs=dTembs,
-                mnet=mnet, inds_of_out_heads=regged_outputs,
-                prev_theta=prev_theta, prev_task_embs=prev_task_embs,
-                batch_size=config.cl_reg_batch_size)
+                                                targets=targets_hypernet, dTheta=dTheta, dTembs=dTembs,
+                                                mnet=mnet, inds_of_out_heads=regged_outputs,
+                                                prev_theta=prev_theta, prev_task_embs=prev_task_embs,
+                                                batch_size=config.cl_reg_batch_size)
 
             loss_reg *= config.beta
 
@@ -513,7 +516,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
         # Learning rate scheduler
         #########################
         if config.plateau_lr_scheduler:
-            assert(iter_per_epoch != -1)
+            assert (iter_per_epoch != -1)
             if i % iter_per_epoch == 0 and i > 0:
                 curr_epoch = i // iter_per_epoch
                 logger.info('Computing test accuracy for plateau LR ' +
@@ -527,7 +530,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
                 # FIXME We increase `train_iter` as the print messages in the
                 # test method suggest that the testing has been executed before
                 test_acc, _ = test(task_id, data, mnet, hnet, device, shared,
-                                   config, writer, logger, train_iter=i+1)
+                                   config, writer, logger, train_iter=i + 1)
                 mnet.train()
                 if hnet is not None:
                     hnet.train()
@@ -537,7 +540,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
                     plateau_scheduler_emb.step(test_acc)
 
         if config.lambda_lr_scheduler:
-            assert(iter_per_epoch != -1)
+            assert (iter_per_epoch != -1)
             if i % iter_per_epoch == 0 and i > 0:
                 curr_epoch = i // iter_per_epoch
                 logger.info('Applying Lambda LR scheduler (epoch %d).'
@@ -545,7 +548,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
 
                 lambda_scheduler_theta.step()
                 if lambda_scheduler_emb is not None:
-                        lambda_scheduler_emb.step()
+                    lambda_scheduler_emb.step()
 
         ###########################
         ### Tensorboard summary ###
@@ -570,7 +573,6 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
             logger.info('Training step: %d ... Done -- (runtime: %f sec)' % \
                         (i, iter_end_time - iter_start_time))
 
-
     if mnet.batchnorm_layers is not None:
         if not config.bn_distill_stats and \
                 not config.bn_no_running_stats and \
@@ -578,7 +580,7 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
             # Checkpoint the current running statistics (that have been
             # estimated while training the current task).
             for bn_layer in mnet.batchnorm_layers:
-                assert(bn_layer.num_stats == task_id+1)
+                assert (bn_layer.num_stats == task_id + 1)
                 bn_layer.checkpoint_stats()
 
     avg_iter_time = summed_iter_runtime / config.n_iter
@@ -586,7 +588,8 @@ def train(task_id, data, mnet, hnet, device, config, shared, writer, logger):
                 avg_iter_time)
 
     logger.info('Elapsed time for training task %d: %f sec.' % \
-                (task_id+1, time()-start_time))
+                (task_id + 1, time() - start_time))
+
 
 def test_multiple(dhandlers, mnet, hnet, device, config, shared, writer,
                   logger):
@@ -633,7 +636,6 @@ def test_multiple(dhandlers, mnet, hnet, device, config, shared, writer,
         else:
             logger.info('### Testing class-incrementa learning scenario')
 
-
         for j in range(num_tasks):
             data = dhandlers[j]
 
@@ -667,6 +669,7 @@ def test_multiple(dhandlers, mnet, hnet, device, config, shared, writer,
 
     return task_accs, class_accs
 
+
 def analysis(dhandlers, mnet, hnet, device, config, shared, writer, logger,
              during_weights):
     """A function to do some post-hoc analysis on the hypernetwork.
@@ -693,12 +696,12 @@ def analysis(dhandlers, mnet, hnet, device, config, shared, writer, logger,
     for j in range(num_tasks):
         cur_weights = hnet.forward(j)
         cur_weights = torch.cat([a.detach().clone().cpu().flatten()
-                                                        for a in cur_weights])
+                                 for a in cur_weights])
         aft_weights = torch.cat([a.flatten() for a in during_weights[j]])
 
         logger.info('### Euclidean distance of current hnet output to ' +
                     'original one for task %d: %f' % \
-                    (j, torch.sqrt(torch.sum((aft_weights - cur_weights)**2))))
+                    (j, torch.sqrt(torch.sum((aft_weights - cur_weights) ** 2))))
 
     # FIXME Inefficient, we already computed all hnet outputs above.
     for j in range(num_tasks):
@@ -713,7 +716,8 @@ def analysis(dhandlers, mnet, hnet, device, config, shared, writer, logger,
                                    for a in weights_2])
             logger.info('### Euclidean distance between ' +
                         'task %d and task %d: %f' % (j, i,
-                        torch.sqrt(torch.sum((weights_1 - weights_2)**2))))
+                                                     torch.sqrt(torch.sum((weights_1 - weights_2) ** 2))))
+
 
 def run(config, experiment='resnet'):
     """Run the training.
@@ -725,16 +729,16 @@ def run(config, experiment='resnet'):
             - ``resnet``: CIFAR-10/100 with Resnet-32.
             - ``zenke``: CIFAR-10/100 with Zenkenet.
     """
-    assert(experiment in ['resnet', 'zenke'])
+    assert (experiment in ['resnet', 'zenke'])
 
     script_start = time()
 
     device, writer, logger = sutils.setup_environment(config,
-        logger_name='det_cl_cifar_%s' % experiment)
+                                                      logger_name='det_cl_cifar_%s' % experiment)
     # TODO Adapt script to allow checkpointing of models using
     # `utils.torch_ckpts` (i.e., we should be able to continue training or just
     # test an existing checkpoint).
-    #config.ckpt_dir = os.path.join(config.out_dir, 'checkpoints')
+    # config.ckpt_dir = os.path.join(config.out_dir, 'checkpoints')
 
     # Container for variables shared across function.
     shared = Namespace()
@@ -779,14 +783,14 @@ def run(config, experiment='resnet'):
     ### Start Training ###
     ######################
     for j in range(config.num_tasks):
-        logger.info('Starting training of task %d ...' % (j+1))
+        logger.info('Starting training of task %d ...' % (j + 1))
 
         data = dhandlers[j]
 
         # It might be that tasks are very similar and we can transfer knowledge
-        # form the previous solution.
+        # from the previous solution.
         if hnet is not None and config.init_with_prev_emb and j > 0:
-            last_emb = hnet.get_task_emb(j-1).detach().clone()
+            last_emb = hnet.get_task_emb(j - 1).detach().clone()
             hnet.get_task_emb(j).data = last_emb
 
         # Training from scratch -- create new network instance!
@@ -820,8 +824,8 @@ def run(config, experiment='resnet'):
                            logger)
 
         logger.info('### Accuracy of task %d / %d:  %.3f' % \
-                    (j+1, config.num_tasks, test_acc))
-        logger.info('### Finished training task: %d' % (j+1))
+                    (j + 1, config.num_tasks, test_acc))
+        logger.info('### Finished training task: %d' % (j + 1))
         shared.summary['acc_during'][j] = test_acc
 
         # Backup results so far.
@@ -857,6 +861,6 @@ def run(config, experiment='resnet'):
     logger.info('Program finished successfully in %f sec.'
                 % (time() - script_start))
 
+
 if __name__ == '__main__':
     raise Exception('Script is not executable!')
-

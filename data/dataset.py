@@ -56,11 +56,13 @@ limitation (e.g., see abstract base class
     data.dataset.Dataset.tf_output_map
 """
 from abc import ABC, abstractmethod
-import numpy as np
-from sklearn.preprocessing import OneHotEncoder
-import matplotlib.pyplot as plt
+
 import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
 import numpy.matlib as npm
+from sklearn.preprocessing import OneHotEncoder
+
 
 class Dataset(ABC):
     """A general dataset template that can be used as a simple and consistent
@@ -306,7 +308,7 @@ class Dataset(ABC):
         """
         out_data = self._data['out_data'][self._data['test_inds'], :]
         return self._get_outputs(out_data, use_one_hot)
-    
+
     def get_val_outputs(self, use_one_hot=None):
         """Get the outputs (targets) of all validation samples.
 
@@ -455,7 +457,7 @@ class Dataset(ABC):
         # overwritten.
         in_img = np.size(self.in_shape) == 3 and self.in_shape[-1] in [1, 3, 4]
         out_img = np.size(self.out_shape) == 3 and \
-            self.out_shape[-1] in [1, 3, 4]
+                  self.out_shape[-1] in [1, 3, 4]
         return (in_img, out_img)
 
     def tf_input_map(self, mode='inference'):
@@ -479,7 +481,7 @@ class Dataset(ABC):
             (function): A function handle, that maps the given input tensor to
             the preprocessed input tensor.
         """
-        return lambda x : x
+        return lambda x: x
 
     def tf_output_map(self, mode='inference'):
         """Similar to method :meth:`tf_input_map`, just for dataset outputs.
@@ -492,7 +494,7 @@ class Dataset(ABC):
         Returns:
             (function): A function handle.
         """
-        return lambda x : x
+        return lambda x: x
 
     def input_to_torch_tensor(self, x, device, mode='inference',
                               force_no_preprocessing=False):
@@ -520,7 +522,7 @@ class Dataset(ABC):
         """
         # Note, this import is only needed for the functions:
         # input_to_torch_tensor() and output_to_torch_tensor()
-        from  torch import from_numpy
+        from torch import from_numpy
         return from_numpy(x).float().to(device)
 
     def output_to_torch_tensor(self, y, device, mode='inference',
@@ -537,7 +539,7 @@ class Dataset(ABC):
         Returns:
             (torch.Tensor): The given output ``y`` as PyTorch tensor.
         """
-        from  torch import from_numpy
+        from torch import from_numpy
         return from_numpy(y).float().to(device)
 
     def plot_samples(self, title, inputs, outputs=None, predictions=None,
@@ -573,7 +575,7 @@ class Dataset(ABC):
         # Determine the configs for the grid of this figure.
         pc = self._plot_config(inputs, outputs=outputs,
                                predictions=predictions)
-        
+
         # Reverse one-hot encoding.
         if self.classification:
             num_time_steps = 1
@@ -584,7 +586,7 @@ class Dataset(ABC):
             one_hot_size = num_time_steps * self.num_classes
             if outputs is not None and outputs.shape[1] == one_hot_size:
                 outputs = self._to_one_hot(outputs, True)
-                
+
             # Note, we don't reverse the encoding for predictions, as this
             # might be important for the subsequent plotting method.
 
@@ -596,18 +598,18 @@ class Dataset(ABC):
         outer_grid = gridspec.GridSpec(num_rows, num_cols,
                                        wspace=pc['outer_wspace'],
                                        hspace=pc['outer_hspace'])
-        
+
         plt.suptitle(title, size=20)
         if interactive:
             plt.ion()
-        
+
         outs = None
         preds = None
-        
+
         for i in range(num_plots):
             inner_grid = gridspec.GridSpecFromSubplotSpec(pc['num_inner_rows'],
-                pc['num_inner_cols'], subplot_spec=outer_grid[i],
-                wspace=pc['inner_wspace'], hspace=pc['inner_hspace'])
+                                                          pc['num_inner_cols'], subplot_spec=outer_grid[i],
+                                                          wspace=pc['inner_wspace'], hspace=pc['inner_hspace'])
 
             if outputs is not None:
                 outs = outputs[i, :]
@@ -615,7 +617,7 @@ class Dataset(ABC):
                 preds = predictions[i, :]
 
             self._plot_sample(fig, inner_grid, pc['num_inner_plots'], i,
-                              inputs[i, np.newaxis], outputs=outs, 
+                              inputs[i, np.newaxis], outputs=outs,
                               predictions=preds)
 
         if show:
@@ -718,7 +720,7 @@ class Dataset(ABC):
         """
         if not self.classification:
             raise RuntimeError('This method can only be called for ' +
-                                   'classification datasets.')
+                               'classification datasets.')
 
         # Initialize encoder.
         if self._one_hot_encoder is None:
@@ -728,7 +730,7 @@ class Dataset(ABC):
             if self.sequence:
                 num_time_steps = labels.shape[1] // np.prod(self.out_shape)
             self._one_hot_encoder.fit(npm.repmat(
-                    np.arange(self.num_classes), num_time_steps, 1).T)
+                np.arange(self.num_classes), num_time_steps, 1).T)
 
         if reverse:
             # Unfortunately, there is no inverse function in the OneHotEncoder
@@ -737,7 +739,7 @@ class Dataset(ABC):
             # are returned as tuples, where the second column contains the
             # original column indices. These column indices from "labels"
             # mudolo the number of classes results in the original labels.
-            return np.reshape(np.argwhere(labels)[:,1] % self.num_classes, 
+            return np.reshape(np.argwhere(labels)[:, 1] % self.num_classes,
                               (labels.shape[0], -1))
         else:
             return self._one_hot_encoder.transform(labels).toarray()
@@ -815,7 +817,6 @@ class Dataset(ABC):
             yield indices[arr_inds[i]]
             i += 1
 
+
 if __name__ == '__main__':
     pass
-
-

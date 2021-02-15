@@ -35,13 +35,14 @@ inducing the task id and a sample from a prior distribution in the network. In
 this way, the encoder can also be trained to not forget previous tasks.
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
-import numpy as np
 
 from toy_example.main_model import MainNetwork
+
 
 class RecognitionNet(nn.Module):
     """The recognition network consists of an encoder and decoder. The encoder
@@ -63,7 +64,8 @@ class RecognitionNet(nn.Module):
         dim_alpha: Dimensionality of the softmax layer alpha.
         dim_z: Dimensionality of the latent embeddings z.
     """
-    def __init__(self, n_in, n_tasks, dim_z=8, enc_layers=[10,10],
+
+    def __init__(self, n_in, n_tasks, dim_z=8, enc_layers=[10, 10],
                  activation_fn=torch.nn.ReLU(), use_bias=True):
         """Initialize the network.
 
@@ -87,17 +89,17 @@ class RecognitionNet(nn.Module):
 
         ## Enoder
         encoder_shapes = MainNetwork.weight_shapes(n_in=n_in,
-            n_out=self._n_alpha+self._n_nu_z, hidden_layers=enc_layers,
-            use_bias=use_bias)
+                                                   n_out=self._n_alpha + self._n_nu_z, hidden_layers=enc_layers,
+                                                   use_bias=use_bias)
         self._encoder = MainNetwork(encoder_shapes, activation_fn=activation_fn,
                                     use_bias=use_bias, no_weights=False,
                                     dropout_rate=-1, verbose=False)
         self._weights_enc = self._encoder.weights
 
         ## Decoder
-        decoder_shapes = MainNetwork.weight_shapes(n_in=self._n_alpha+self._n_z,
-            n_out=n_in, hidden_layers=list(reversed(enc_layers)),
-            use_bias=use_bias)
+        decoder_shapes = MainNetwork.weight_shapes(n_in=self._n_alpha + self._n_z,
+                                                   n_out=n_in, hidden_layers=list(reversed(enc_layers)),
+                                                   use_bias=use_bias)
         self._decoder = MainNetwork(decoder_shapes, activation_fn=activation_fn,
                                     use_bias=use_bias, no_weights=False,
                                     dropout_rate=-1, verbose=False)
@@ -288,7 +290,6 @@ class RecognitionNet(nn.Module):
         """
         return F.mse_loss(x, x_rec)
 
+
 if __name__ == '__main__':
     pass
-
-

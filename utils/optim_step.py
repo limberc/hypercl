@@ -91,9 +91,11 @@ state of an optimizer, such that the user can get the change of parameters that
 would be executed by the optimizer.
 """
 
-from torch import optim
-import torch
 import math
+
+import torch
+from torch import optim
+
 
 def calc_delta_theta(optimizer, use_sgd_change, lr=None, detach_dt=True):
     r"""Calculate :math:`\Delta\theta`, i.e., the change in trainable parameters
@@ -123,7 +125,7 @@ def calc_delta_theta(optimizer, use_sgd_change, lr=None, detach_dt=True):
     Returns:
         :math:`\Delta\theta`
     """
-    assert(not use_sgd_change or lr is not None)
+    assert (not use_sgd_change or lr is not None)
 
     if use_sgd_change:
         ret = []
@@ -144,6 +146,7 @@ def calc_delta_theta(optimizer, use_sgd_change, lr=None, detach_dt=True):
         else:
             raise NotImplementedError('Not implemented for optimizer %s' %
                                       optimizer.type)
+
 
 def sgd_step(optimizer, detach_dp=True):
     """Performs a single optimization step using the SGD optimizer. The code
@@ -167,7 +170,7 @@ def sgd_step(optimizer, detach_dp=True):
         A list of gradient changes `d_p` that would be applied by this
         optimizer to all parameters when calling :meth:`torch.optim.SGD.step`.
     """
-    assert(isinstance(optimizer, optim.SGD))
+    assert (isinstance(optimizer, optim.SGD))
 
     d_ps = []
 
@@ -201,7 +204,7 @@ def sgd_step(optimizer, detach_dp=True):
                 else:
                     buf = param_state['momentum_buffer']
                     buf.mul_(momentum).add_(1 - dampening, d_p)
-                    #buf = buf.mul(momentum).add(1 - dampening, d_p)
+                    # buf = buf.mul(momentum).add(1 - dampening, d_p)
                 if nesterov:
                     d_p = d_p.add(momentum, buf)
                 else:
@@ -210,6 +213,7 @@ def sgd_step(optimizer, detach_dp=True):
             d_ps.append(-group['lr'] * d_p)
 
     return d_ps
+
 
 def adam_step(optimizer, detach_dp=True):
     """Performs a single optimization step using the Adam optimizer. The code
@@ -284,24 +288,24 @@ def adam_step(optimizer, detach_dp=True):
             state['step'] += 1
 
             if group['weight_decay'] != 0:
-                #grad.add_(group['weight_decay'], p.data)
+                # grad.add_(group['weight_decay'], p.data)
                 grad.add(group['weight_decay'], p.data)
 
             # Decay the first and second moment running average coefficient
             exp_avg.mul_(beta1).add_(1 - beta1, grad)
-            #exp_avg.mul_(beta1)
-            #exp_avg += (1 - beta1) * grad
+            # exp_avg.mul_(beta1)
+            # exp_avg += (1 - beta1) * grad
 
             exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
-            #exp_avg_sq.mul_(beta2)
-            #exp_avg_sq = torch.addcmul(exp_avg_sq, 1 - beta2, grad, grad)
+            # exp_avg_sq.mul_(beta2)
+            # exp_avg_sq = torch.addcmul(exp_avg_sq, 1 - beta2, grad, grad)
             if amsgrad:
                 # Maintains the maximum of all 2nd moment running avg. till now
                 torch.max(max_exp_avg_sq, exp_avg_sq, out=max_exp_avg_sq)
                 # Use the max. for normalizing running avg. of gradient
                 denom = max_exp_avg_sq.sqrt().add_(group['eps'])
             else:
-                #denom = exp_avg_sq.sqrt().add_(group['eps'])
+                # denom = exp_avg_sq.sqrt().add_(group['eps'])
                 denom = exp_avg_sq.sqrt() + group['eps']
 
             bias_correction1 = 1 - beta1 ** state['step']
@@ -312,6 +316,7 @@ def adam_step(optimizer, detach_dp=True):
             d_ps.append(-step_size * (exp_avg / denom))
 
     return d_ps
+
 
 def rmsprop_step(optimizer, detach_dp=True):
     """Performs a single optimization step using the RMSprop optimizer. The code
@@ -381,22 +386,22 @@ def rmsprop_step(optimizer, detach_dp=True):
             if group['weight_decay'] != 0:
                 grad = grad.add(group['weight_decay'], p.data)
 
-            #square_avg.mul_(alpha).addcmul_(1 - alpha, grad, grad)
+            # square_avg.mul_(alpha).addcmul_(1 - alpha, grad, grad)
             square_avg = square_avg.mul(alpha).addcmul(1 - alpha, grad, grad)
 
             if group['centered']:
                 grad_avg = state['grad_avg']
                 grad_avg.mul_(alpha).add_(1 - alpha, grad)
-                #avg = square_avg.addcmul(-1, grad_avg, grad_avg).sqrt().add_(group['eps'])
-                avg = square_avg.addcmul(-1, grad_avg, grad_avg).sqrt().\
+                # avg = square_avg.addcmul(-1, grad_avg, grad_avg).sqrt().add_(group['eps'])
+                avg = square_avg.addcmul(-1, grad_avg, grad_avg).sqrt(). \
                     add(group['eps'])
             else:
-                #avg = square_avg.sqrt().add_(group['eps'])
+                # avg = square_avg.sqrt().add_(group['eps'])
                 avg = square_avg.sqrt().add(group['eps'])
 
             if group['momentum'] > 0:
                 buf = state['momentum_buffer']
-                #buf.mul_(group['momentum']).addcdiv_(grad, avg)
+                # buf.mul_(group['momentum']).addcdiv_(grad, avg)
                 buf = buf.mul(group['momentum']) + grad / avg
 
                 d_ps.append(-group['lr'] * buf)
@@ -405,6 +410,6 @@ def rmsprop_step(optimizer, detach_dp=True):
 
     return d_ps
 
+
 if __name__ == '__main__':
     pass
-

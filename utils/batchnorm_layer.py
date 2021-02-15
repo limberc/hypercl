@@ -47,11 +47,12 @@ the statistics will be set to zero mean and unit variance. This is helpful when
 interpreting batch-normalization as a general form of gain modulation (i.e.,
 just applying a shift and scale to neural activities).
 """
+from warnings import warn
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from warnings import warn
 
 class BatchNormLayer(nn.Module):
     r"""Hypernetwork-compatible batch-normalization layer.
@@ -117,6 +118,7 @@ class BatchNormLayer(nn.Module):
             (m_{\text{stats}}^{(T)}, v_{\text{stats}}^{(T)}) \}`. This number is
             incremented everytime the method :meth:`checkpoint_stats` is called.
     """
+
     def __init__(self, num_features, momentum=0.1, affine=True,
                  track_running_stats=True, frozen_stats=False,
                  learnable_stats=False):
@@ -385,8 +387,8 @@ class BatchNormLayer(nn.Module):
         Returns:
             The layer activation ``inputs`` after batch-norm has been applied.
         """
-        assert(running_mean is None and running_var is None or \
-               running_mean is not None and running_var is not None)
+        assert (running_mean is None and running_var is None or \
+                running_mean is not None and running_var is not None)
 
         if not self._affine:
             if weight is None or bias is None:
@@ -404,13 +406,13 @@ class BatchNormLayer(nn.Module):
         stats_given = running_mean is not None
 
         if (running_mean is None or running_var is None):
-            if stats_id is None  and self.num_stats > 1:
+            if stats_id is None and self.num_stats > 1:
                 raise ValueError('Parameter "stats_id" is not defined but ' +
                                  'multiple running stats are available.')
             elif self._track_running_stats:
                 if stats_id is None:
                     stats_id = 0
-                assert(stats_id < self.num_stats)
+                assert (stats_id < self.num_stats)
 
                 rm, rv = self.get_stats(stats_id)
 
@@ -439,19 +441,19 @@ class BatchNormLayer(nn.Module):
             # TODO implement scale and shift here. Note, that `running_mean` and
             # `running_var` are always 0 and 1, resp. Therefore, the call to
             # `F.batch_norm` is a waste of computation.
-            #ret = inputs
-            #if weight is not None:
+            # ret = inputs
+            # if weight is not None:
             #    # Multiply `ret` with `weight` such that dimensions are
             #    # respected.
             #    pass
-            #if bias is not None:
+            # if bias is not None:
             #    # Add `bias` to modified `ret` such that dimensions are
             #    # respected.
             #    pass
-            #return ret
+            # return ret
 
         else:
-            assert(not self._track_running_stats)
+            assert (not self._track_running_stats)
 
             # Always compute statistics based on current batch.
             return F.batch_norm(inputs, None, None, weight=weight, bias=bias,
@@ -468,12 +470,12 @@ class BatchNormLayer(nn.Module):
                 will either be moved to the device of the most recent statistics
                 or to CPU if no prior statistics exist.
         """
-        assert(self._track_running_stats or \
-               self._frozen_stats and self._num_stats == 0)
+        assert (self._track_running_stats or \
+                self._frozen_stats and self._num_stats == 0)
 
         if device is None:
             if self.num_stats > 0:
-                mname_old, _ = self._stats_names(self._num_stats-1)
+                mname_old, _ = self._stats_names(self._num_stats - 1)
                 device = getattr(self, mname_old).device
 
         if self._learnable_stats:
@@ -502,7 +504,7 @@ class BatchNormLayer(nn.Module):
         """
         if stats_id is None:
             stats_id = self.num_stats - 1
-        assert(stats_id < self.num_stats)
+        assert (stats_id < self.num_stats)
 
         mname, vname = self._stats_names(stats_id)
 
@@ -510,7 +512,6 @@ class BatchNormLayer(nn.Module):
         running_var = getattr(self, vname)
 
         return running_mean, running_var
-
 
     def _stats_names(self, stats_id):
         """Get the buffer names for mean and variance statistics depending on
@@ -530,7 +531,6 @@ class BatchNormLayer(nn.Module):
 
         return mean_name, var_name
 
+
 if __name__ == '__main__':
     pass
-
-

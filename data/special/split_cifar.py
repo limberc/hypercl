@@ -30,8 +30,9 @@ for the Split-CIFAR10/CIFAR100 task.
 # corresponding `split_mnist` module.
 import numpy as np
 
-from data.cifar10_data import CIFAR10Data
 from data.cifar100_data import CIFAR100Data
+from data.cifar10_data import CIFAR10Data
+
 
 # DELETEME
 def get_split_CIFAR_handlers(data_path, use_one_hot=True, validation_size=0,
@@ -40,6 +41,7 @@ def get_split_CIFAR_handlers(data_path, use_one_hot=True, validation_size=0,
     """
     raise NotImplementedError('Function has been removed. Use function ' +
                               '"get_split_cifar_handlers" instead.')
+
 
 def get_split_cifar_handlers(data_path, use_one_hot=True, validation_size=0,
                              use_data_augmentation=False, num_tasks=6):
@@ -73,21 +75,22 @@ def get_split_cifar_handlers(data_path, use_one_hot=True, validation_size=0,
         :class:`data.cifar10_data.CIFAR10Data` and the remaining ones being an
         instance of class :class:`SplitCIFAR100Data`.
     """
-    assert(num_tasks >= 1 and num_tasks <= 11)
+    assert (num_tasks >= 1 and num_tasks <= 11)
     print('Creating data handlers for SplitCIFAR tasks ...')
 
     handlers = []
     handlers.append(CIFAR10Data(data_path, use_one_hot=use_one_hot,
-            validation_size=validation_size,
-            use_data_augmentation=use_data_augmentation))
-    for i in range(0, (num_tasks-1) * 10, 10):
-        handlers.append(SplitCIFAR100Data(data_path, 
-            use_one_hot=use_one_hot, validation_size=validation_size,
-            use_data_augmentation=use_data_augmentation, labels=range(i, i+10)))
+                                validation_size=validation_size,
+                                use_data_augmentation=use_data_augmentation))
+    for i in range(0, (num_tasks - 1) * 10, 10):
+        handlers.append(SplitCIFAR100Data(data_path,
+                                          use_one_hot=use_one_hot, validation_size=validation_size,
+                                          use_data_augmentation=use_data_augmentation, labels=range(i, i + 10)))
 
     print('Creating data handlers for SplitCIFAR tasks ... Done')
 
     return handlers
+
 
 class SplitCIFAR100Data(CIFAR100Data):
     """An instance of the class shall represent a single SplitCIFAR-100 task.
@@ -112,6 +115,7 @@ class SplitCIFAR100Data(CIFAR100Data):
             :attr:`data.dataset.Dataset.num_classes` and
             :attr:`data.dataset.Dataset.out_shape`.
     """
+
     def __init__(self, data_path, use_one_hot=False, validation_size=1000,
                  use_data_augmentation=False, labels=range(0, 10),
                  full_out_dim=False):
@@ -163,7 +167,7 @@ class SplitCIFAR100Data(CIFAR100Data):
                               train_outs.shape[0] + test_outs.shape[0])
 
         outputs = np.concatenate([train_outs, test_outs], axis=0)
-        
+
         if not full_out_dim:
             outputs = self.transform_outputs(outputs)
             # Note, we may also have to adapt the output shape appropriately.
@@ -208,7 +212,7 @@ class SplitCIFAR100Data(CIFAR100Data):
         """
         labels = self._labels
         if self.is_one_hot:
-            assert(outputs.shape[1] == self._data['num_classes'])
+            assert (outputs.shape[1] == self._data['num_classes'])
             mask = np.zeros(self._data['num_classes'], dtype=np.bool)
             mask[labels] = True
 
@@ -224,7 +228,6 @@ class SplitCIFAR100Data(CIFAR100Data):
         """Returns the name of the dataset."""
         return 'SplitCIFAR100'
 
+
 if __name__ == '__main__':
     pass
-
-

@@ -35,16 +35,18 @@ Information about the dataset can be retrieved from:
 # FIXME: The content of this module is mostly a copy of the module
 # 'cifar10_data'. These two should be merged in future.
 
-import os
-import numpy as np
-import time
 import _pickle as pickle
-import urllib.request
+import os
 import tarfile
-import matplotlib.pyplot as plt
+import time
+import urllib.request
 
-from data.dataset import Dataset
+import matplotlib.pyplot as plt
+import numpy as np
+
 from data.cifar10_data import CIFAR10Data
+from data.dataset import Dataset
+
 
 class CIFAR100Data(Dataset):
     """An instance of the class shall represent the CIFAR-100 dataset.
@@ -82,11 +84,10 @@ class CIFAR100Data(Dataset):
             print('Creating directory "%s" ...' % (data_path))
             os.makedirs(data_path)
 
-        extracted_data_dir = os.path.join(data_path, 
+        extracted_data_dir = os.path.join(data_path,
                                           CIFAR100Data._EXTRACTED_FOLDER)
 
         archive_fn = os.path.join(data_path, CIFAR100Data._DOWNLOAD_FILE)
-
 
         if not os.path.exists(extracted_data_dir):
             print('Downloading dataset ...')
@@ -101,21 +102,21 @@ class CIFAR100Data(Dataset):
 
             os.remove(archive_fn)
 
-        train_batch_fn = os.path.join(extracted_data_dir, 
-                                     CIFAR100Data._TRAIN_BATCH_FN)
-        test_batch_fn = os.path.join(extracted_data_dir, 
+        train_batch_fn = os.path.join(extracted_data_dir,
+                                      CIFAR100Data._TRAIN_BATCH_FN)
+        test_batch_fn = os.path.join(extracted_data_dir,
                                      CIFAR100Data._TEST_BATCH_FN)
-        meta_fn = os.path.join(extracted_data_dir, 
+        meta_fn = os.path.join(extracted_data_dir,
                                CIFAR100Data._META_DATA_FN)
 
-        assert(os.path.exists(train_batch_fn) and
-               os.path.exists(test_batch_fn) and os.path.exists(meta_fn))
+        assert (os.path.exists(train_batch_fn) and
+                os.path.exists(test_batch_fn) and os.path.exists(meta_fn))
 
         self._data['classification'] = True
         self._data['sequence'] = False
         self._data['num_classes'] = 100
         self._data['is_one_hot'] = use_one_hot
-        
+
         self._data['in_shape'] = [32, 32, 3]
         self._data['out_shape'] = [100 if use_one_hot else 1]
 
@@ -130,9 +131,9 @@ class CIFAR100Data(Dataset):
             self._augment_inputs = True
             self._train_transform, self._test_transform = \
                 CIFAR10Data.torch_input_transforms()
-    
+
         end = time.time()
-        print('Elapsed time to read dataset: %f sec' % (end-start))
+        print('Elapsed time to read dataset: %f sec' % (end - start))
 
     def _read_meta(self, filename):
         """Read the meta data file.
@@ -189,14 +190,14 @@ class CIFAR100Data(Dataset):
         train_samples = train_batch['data'.encode()]
 
         if validation_size > 0:
-            assert(validation_size < train_labels.shape[0])
+            assert (validation_size < train_labels.shape[0])
             val_inds = np.arange(validation_size)
             train_inds = np.arange(validation_size, train_labels.size)
 
         else:
             train_inds = np.arange(train_labels.size)
 
-        test_inds = np.arange(train_labels.size, 
+        test_inds = np.arange(train_labels.size,
                               train_labels.size + test_labels.size)
 
         labels = np.concatenate([train_labels, test_labels])
@@ -217,7 +218,7 @@ class CIFAR100Data(Dataset):
         self._data['train_inds'] = train_inds
         self._data['test_inds'] = test_inds
         if validation_size > 0:
-                self._data['val_inds'] = val_inds
+            self._data['val_inds'] = val_inds
 
         if self._data['is_one_hot']:
             labels = self._to_one_hot(labels)
@@ -259,7 +260,7 @@ class CIFAR100Data(Dataset):
 
         else:
             return Dataset.input_to_torch_tensor(self, x, device,
-                mode=mode, force_no_preprocessing=force_no_preprocessing)
+                                                 mode=mode, force_no_preprocessing=force_no_preprocessing)
 
     def _plot_sample(self, fig, inner_grid, num_inner_plots, ind, inputs,
                      outputs=None, predictions=None):
@@ -271,7 +272,7 @@ class CIFAR100Data(Dataset):
         if outputs is None:
             ax.set_title("CIFAR-100 Sample")
         else:
-            assert(np.size(outputs) == 1)
+            assert (np.size(outputs) == 1)
             label = np.asscalar(outputs)
             label_name = self._data['cifar100']['fine_label_names'][label]
 
@@ -302,7 +303,7 @@ class CIFAR100Data(Dataset):
             if outputs is not None:
                 bars[int(label)].set_color('r')
             fig.add_subplot(ax)
-        
+
     def _plot_config(self, inputs, outputs=None, predictions=None):
         """Re-Implementation of method
         :meth:`data.dataset.Dataset._plot_config`.
@@ -312,18 +313,17 @@ class CIFAR100Data(Dataset):
         """
         plot_configs = super()._plot_config(inputs, outputs=outputs,
                                             predictions=predictions)
-        
+
         if predictions is not None and \
                 np.shape(predictions)[1] == self.num_classes:
             plot_configs['outer_hspace'] = 0.6
             plot_configs['inner_hspace'] = 0.4
             plot_configs['num_inner_rows'] = 2
-            #plot_configs['num_inner_cols'] = 1
+            # plot_configs['num_inner_cols'] = 1
             plot_configs['num_inner_plots'] = 2
 
         return plot_configs
 
+
 if __name__ == '__main__':
     pass
-
-

@@ -23,27 +23,29 @@
 A collection of helper functions to keep other scripts clean. The main purpose
 is to collect the description of all command-line parameters.
 """
-import torch
-import torch.nn.functional as F
-import tensorboardX
-from tensorboardX import SummaryWriter
 import argparse
+import itertools
+import os
+import pickle
+import random
+import shutil
 import warnings
 from datetime import datetime
-import numpy as np
-import random
-import os
-import shutil
-import pickle
-import itertools
-import matplotlib.pyplot as plt
 
-from toy_example.regression1d_data import ToyRegression
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorboardX
+import torch
+import torch.nn.functional as F
+from tensorboardX import SummaryWriter
+
 import toy_example.gaussian_mixture_data as gmm_data
-from toy_example.main_model import MainNetwork
-from toy_example.hyper_model import HyperNetwork
-from toy_example.task_recognition_model import RecognitionNet
 import utils.misc as misc
+from toy_example.hyper_model import HyperNetwork
+from toy_example.main_model import MainNetwork
+from toy_example.regression1d_data import ToyRegression
+from toy_example.task_recognition_model import RecognitionNet
+
 
 def parse_cmd_arguments(mode='train_regression', default=False, argv=None):
     """Parse command-line arguments.
@@ -67,11 +69,11 @@ def parse_cmd_arguments(mode='train_regression', default=False, argv=None):
         The Namespace object containing argument names and values.
     """
     if mode == 'train_regression':
-        description='Continual Learning - Toy Regression'
+        description = 'Continual Learning - Toy Regression'
     elif mode == 'train_mt_regression':
-        description='Multi-task Learning - Toy Regression'
+        description = 'Multi-task Learning - Toy Regression'
     elif mode == 'train_ewc_regression':
-        description='Continual Learning - EWC - Toy Regression'
+        description = 'Continual Learning - EWC - Toy Regression'
     else:
         raise Exception('Mode "%s" unknown.' % (mode))
     parser = argparse.ArgumentParser(description=description)
@@ -129,7 +131,7 @@ def parse_cmd_arguments(mode='train_regression', default=False, argv=None):
                         help='How often the validation should be performed ' +
                              'during training.')
     parser.add_argument('--out_dir', type=str, default='./out/run_' +
-                            datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
+                                                       datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
                         help='Where to store the outputs of this simulation.')
     parser.add_argument('--no_cuda', action='store_true',
                         help='Flag to disable GPU usage.')
@@ -167,16 +169,16 @@ def parse_cmd_arguments(mode='train_regression', default=False, argv=None):
     config = parser.parse_args(args=args)
 
     ### Check argument values!
-    assert(config.dataset in range(2))
-    if mode == 'train_regression' or mode =='train_ewc_regression':
+    assert (config.dataset in range(2))
+    if mode == 'train_regression' or mode == 'train_ewc_regression':
         if config.train_from_scratch and config.beta > 0:
             raise ValueError('"beta" should be 0 when training from scratch.')
         if mode == 'train_regression':
-            assert(config.reg in range(4))
-            assert(not config.ewc_weight_importance or config.reg == 0)
+            assert (config.reg in range(4))
+            assert (not config.ewc_weight_importance or config.reg == 0)
             if config.ewc_weight_importance:
                 # See docstring of method "_cl_arguments_ewc" for an exlanation.
-                assert(not config.online_ewc)
+                assert (not config.online_ewc)
 
             if config.masked_reg:
                 if not config.multi_head:
@@ -187,13 +189,14 @@ def parse_cmd_arguments(mode='train_regression', default=False, argv=None):
                                      'masked when using regularizer 0, 1 or 2.')
                 if config.reg in [1, 2]:
                     raise NotImplementedError('Reg masking not yet ' +
-                        'implemented for chosen regularizer.')
+                                              'implemented for chosen regularizer.')
 
                 if config.plastic_prev_tembs and config.reg != 0:
                     raise ValueError('"plastic_prev_tembs" may only be ' +
                                      'enabled if "reg=0".')
 
     return config
+
 
 def _cl_arguments_general(parser):
     """This is a helper method of the method parse_cmd_arguments to add
@@ -215,6 +218,7 @@ def _cl_arguments_general(parser):
                              'training on each task. Hence, training starts ' +
                              'from scratch.')
     return parser
+
 
 def _cl_arguments_ours(parser):
     """This is a helper method of the method parse_cmd_arguments to add
@@ -280,7 +284,7 @@ def _cl_arguments_ours(parser):
                         help='Allow the adaptation of previous task ' +
                              'embeddings. Note, by default we leave them ' +
                              'constant after learning the corresponding ' +
-                             'task. However, allowing them to change when '+
+                             'task. However, allowing them to change when ' +
                              'learning new tasks (while keeping their ' +
                              'targets fixed) should give more capacity and ' +
                              'flexibilty to the hypernet with no obvious ' +
@@ -298,6 +302,7 @@ def _cl_arguments_ours(parser):
                              'Note, we don\'t allow the usage of online EWC.')
 
     return parser
+
 
 def _cl_arguments_ewc(parser):
     """This is a helper method of the method parse_cmd_arguments to add
@@ -338,6 +343,7 @@ def _cl_arguments_ewc(parser):
                              '"-1", all training samples are used.')
     return parser
 
+
 def _ae_arguments(parser):
     """This is a helper method of the method parse_cmd_arguments to add
     arguments to the parser that are specific to using a task recognition
@@ -349,7 +355,7 @@ def _ae_arguments(parser):
     Returns:
         parser: AE arguments have been added.
     """
-        ### Recognition network.
+    ### Recognition network.
     parser.add_argument('--use_task_detection', action='store_true',
                         help='Enable the usage of a recognition model that ' +
                              'is trained in parallel and used for task ' +
@@ -381,6 +387,7 @@ def _ae_arguments(parser):
                              'term in the loss of the recognition network.')
     return parser
 
+
 def _mt_arguments(parser):
     """This is a helper method of the method parse_cmd_arguments to add
     arguments to the parser that are specific to the multi-task learning setup.
@@ -405,6 +412,7 @@ def _mt_arguments(parser):
                              'all tasks at once.')
 
     return parser
+
 
 def _hnet_arguments(parser):
     """This is a helper method of the method parse_cmd_arguments to add
@@ -432,6 +440,7 @@ def _hnet_arguments(parser):
     parser.add_argument('--std_normal_temb', type=float, default=1.,
                         help='Std when initializing task embeddings.')
     return parser
+
 
 def _setup_environment(config):
     """Setup the general environment for training. This incorporates:
@@ -492,6 +501,7 @@ def _setup_environment(config):
 
     return device, writer
 
+
 def _generate_tasks(config):
     """Generate a set of user defined tasks.
     
@@ -502,13 +512,14 @@ def _generate_tasks(config):
         data_handlers: A list of data handlers.
         num_tasks: Number of generated tasks.
     """
-    if config.dataset == 0: # 1D function regression.
+    if config.dataset == 0:  # 1D function regression.
         return _generate_1d_tasks(show_plots=not config.no_plots,
                                   data_random_seed=config.data_random_seed)
-    elif config.dataset == 1: # Regression with GMM inputs.
+    elif config.dataset == 1:  # Regression with GMM inputs.
         return _generate_gmm_tasks(config)
     else:
         raise ValueError('Dataset %d unknown!' % config.dataset)
+
 
 def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
     """Generate a set of tasks for 1D regression.
@@ -530,11 +541,11 @@ def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
         x_domains = [[-10, 10]] * num_tasks
 
         # Disjoint x domains.
-        #tmp = np.linspace(-10, 10, num_tasks+1)
-        #x_domains = list(zip(tmp[:-1], tmp[1:]))
+        # tmp = np.linspace(-10, 10, num_tasks+1)
+        # x_domains = list(zip(tmp[:-1], tmp[1:]))
 
         max_degree = 6
-        pcoeffs = np.random.uniform(-1, 1, size=(num_tasks, max_degree+1))
+        pcoeffs = np.random.uniform(-1, 1, size=(num_tasks, max_degree + 1))
 
         map_funcs = []
         for i in range(num_tasks):
@@ -544,7 +555,7 @@ def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
 
             # Decrease the magnitute of higher order coefficients.
             f = .5
-            for j in range(c.size-1, -1, -1):
+            for j in range(c.size - 1, -1, -1):
                 c[j] *= f
                 f *= f
 
@@ -554,11 +565,11 @@ def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
             s = np.max(np.abs(bp)) + 1e-5
             c = c / s * 10.
 
-            map_funcs.append(lambda x, c=c : np.polyval(c, x))
+            map_funcs.append(lambda x, c=c: np.polyval(c, x))
 
         std = .1
 
-    else: # Manually selected tasks.
+    else:  # Manually selected tasks.
         """
         tmp = np.linspace(-15, 15, num_tasks + 1)
         x_domains = list(zip(tmp[:-1], tmp[1:]))
@@ -576,13 +587,12 @@ def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
         std = .1
         """
 
-        map_funcs = [lambda x : (x+3.), 
-                     lambda x : 2. * np.power(x, 2) - 1,
-                     lambda x : np.power(x-3., 3)]
+        map_funcs = [lambda x: (x + 3.),
+                     lambda x: 2. * np.power(x, 2) - 1,
+                     lambda x: np.power(x - 3., 3)]
         num_tasks = len(map_funcs)
-        x_domains = [[-4,-2], [-1,1], [2,4]]
+        x_domains = [[-4, -2], [-1, 1], [2, 4]]
         std = .05
-
 
         """
         map_funcs = [lambda x : (x+30.),
@@ -593,13 +603,12 @@ def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
         std = .5
         """
 
-
     dhandlers = []
     for i in range(num_tasks):
         print('Generating %d-th task.' % (i))
         dhandlers.append(ToyRegression(train_inter=x_domains[i],
-            num_train=100, test_inter=x_domains[i], num_test=50,
-            map_function=map_funcs[i], std=std, rseed=data_random_seed))
+                                       num_train=100, test_inter=x_domains[i], num_test=50,
+                                       map_function=map_funcs[i], std=std, rseed=data_random_seed))
 
         if writer is not None:
             dhandlers[-1].plot_dataset(show=False)
@@ -612,6 +621,7 @@ def _generate_1d_tasks(show_plots=True, data_random_seed=42, writer=None):
             dhandlers[-1].plot_dataset()
 
     return dhandlers, num_tasks
+
 
 def _generate_gmm_tasks(config):
     """Generate a set of regression tasks with inputs drawn from a Gaussian
@@ -636,18 +646,19 @@ def _generate_gmm_tasks(config):
         # For density estimation, the variances shouldn't be too small.
         std = 0.2
 
-    covs = [std**2 * np.eye(len(mean)) for mean in means]
+    covs = [std ** 2 * np.eye(len(mean)) for mean in means]
     dhandlers = gmm_data.get_gmm_tasks(means=means, covs=covs, num_train=1000,
-        num_test=50, rseed=config.data_random_seed)
+                                       num_test=50, rseed=config.data_random_seed)
     num_tasks = len(dhandlers)
 
-    #for i in range(num_tasks):
+    # for i in range(num_tasks):
     #    print('Task %d:' % (i))
     #    dhandlers[i].plot_dataset()
     if not config.no_plots:
         gmm_data.GaussianData.plot_datasets(dhandlers)
 
     return dhandlers, num_tasks
+
 
 def _generate_networks(config, data_handlers, device, create_hnet=True,
                        create_rnet=False, no_replay=False):
@@ -689,8 +700,8 @@ def _generate_networks(config, data_handlers, device, create_hnet=True,
     if create_hnet:
         hnet_arch = misc.str_to_ints(config.hnet_arch)
         hnet = HyperNetwork(main_shapes, num_tasks, layers=hnet_arch,
-            te_dim=config.emb_size,
-            activation_fn=misc.str_to_act(config.hnet_act)).to(device)
+                            te_dim=config.emb_size,
+                            activation_fn=misc.str_to_act(config.hnet_act)).to(device)
         init_params = list(hnet.parameters())
     else:
         hnet = None
@@ -700,11 +711,11 @@ def _generate_networks(config, data_handlers, device, create_hnet=True,
         ae_arch = misc.str_to_ints(config.ae_arch)
         if no_replay:
             rnet_shapes = MainNetwork.weight_shapes(n_in=n_x, n_out=num_tasks,
-                hidden_layers=ae_arch, use_bias=True)
+                                                    hidden_layers=ae_arch, use_bias=True)
             rnet = MainNetwork(rnet_shapes,
-                activation_fn=misc.str_to_act(config.ae_act), use_bias=True,
-                no_weights=False, dropout_rate=-1,
-                out_fn=lambda x : F.softmax(x, dim=1))
+                               activation_fn=misc.str_to_act(config.ae_act), use_bias=True,
+                               no_weights=False, dropout_rate=-1,
+                               out_fn=lambda x: F.softmax(x, dim=1))
         else:
             rnet = RecognitionNet(n_x, num_tasks, dim_z=config.ae_dim_z,
                                   enc_layers=ae_arch,
@@ -716,7 +727,7 @@ def _generate_networks(config, data_handlers, device, create_hnet=True,
 
     ### Initialize network weights.
     for W in init_params:
-        if W.ndimension() == 1: # Bias vector.
+        if W.ndimension() == 1:  # Bias vector.
             torch.nn.init.constant_(W, 0)
         elif config.normal_init:
             torch.nn.init.normal_(W, mean=0, std=config.std_normal_init)
@@ -729,9 +740,10 @@ def _generate_networks(config, data_handlers, device, create_hnet=True,
             torch.nn.init.normal_(temb, mean=0., std=config.std_normal_temb)
 
     if config.use_hyperfan_init:
-        hnet.apply_hyperfan_init(temb_var=config.std_normal_temb**2)
+        hnet.apply_hyperfan_init(temb_var=config.std_normal_temb ** 2)
 
     return mnet, hnet, rnet
+
 
 if __name__ == '__main__':
     pass

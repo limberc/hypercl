@@ -23,9 +23,8 @@
 This module should represent a special gain-modulation layer that can modulate
 neural computation based on an external context.
 """
-import numpy as np
-import torch
 import torch.nn as nn
+
 
 class ContextModLayer(nn.Module):
     r"""Implementation of a layer that can apply context-dependent modulation on
@@ -126,13 +125,13 @@ class ContextModLayer(nn.Module):
         https://pytorch.org/docs/stable/notes/broadcasting.html#broadcasting-\
         semantics
     """
+
     def __init__(self, num_features, no_weights=False, no_gains=False,
                  no_shifts=False, apply_gain_offset=False):
         super(ContextModLayer, self).__init__()
 
         raise NotImplementedError('Implementation not publicly available yet!')
 
+
 if __name__ == '__main__':
     pass
-
-

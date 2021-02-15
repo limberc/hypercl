@@ -23,12 +23,14 @@
 A collection of helper functions.
 """
 
+import math
+from warnings import warn
+
 import matplotlib
 import matplotlib.pyplot as plt
-import math
-from torch import nn
 import torch
-from warnings import warn
+from torch import nn
+
 
 def init_params(weights, bias=None):
     """Initialize the weights and biases of a linear or (transpose) conv layer.
@@ -57,6 +59,7 @@ def init_params(weights, bias=None):
         bound = 1 / math.sqrt(fan_in)
         nn.init.uniform_(bias, -bound, bound)
 
+
 def str_to_ints(str_arg):
     """Helper function to convert a list of comma separated strings into
     integers.
@@ -77,6 +80,7 @@ def str_to_ints(str_arg):
     else:
         return []
 
+
 def list_to_str(list_arg, delim=' '):
     """Convert a list of numbers into a string.
 
@@ -93,6 +97,7 @@ def list_to_str(list_arg, delim=' '):
             ret += delim
         ret += str(e)
     return ret
+
 
 def str_to_act(act_str):
     """Convert the name of an activation function into the actual PyTorch
@@ -117,7 +122,8 @@ def str_to_act(act_str):
         raise Exception('Activation function %s unknown.' % act_str)
     return act
 
-def configure_matplotlib_params(fig_size = [6.4, 4.8], two_axes=True,
+
+def configure_matplotlib_params(fig_size=[6.4, 4.8], two_axes=True,
                                 font_size=8):
     """Helper function to configure default matplotlib parameters.
 
@@ -136,15 +142,16 @@ def configure_matplotlib_params(fig_size = [6.4, 4.8], two_axes=True,
         'xtick.labelsize': font_size,
         'ytick.labelsize': font_size,
         'axes.titlesize': font_size,
-        'axes.spines.right' : not two_axes,
-        'axes.spines.top' : not two_axes,
+        'axes.spines.right': not two_axes,
+        'axes.spines.top': not two_axes,
         'figure.figsize': fig_size,
         'legend.handlelength': 0.5
     }
 
     matplotlib.rcParams.update(params)
 
-def get_colorbrewer2_colors(family = 'Set2'):
+
+def get_colorbrewer2_colors(family='Set2'):
     """Helper function that returns a list of color combinations
     extracted from colorbrewer2.org.
 
@@ -193,6 +200,7 @@ def get_colorbrewer2_colors(family = 'Set2'):
             '#e5d8bd'
         ]
 
+
 def repair_canvas_and_show_fig(fig, close=True):
     """If writing a figure to tensorboard via "add_figure" it might change the
     canvas, such that our backend doesn't allow to show the figure anymore.
@@ -212,6 +220,7 @@ def repair_canvas_and_show_fig(fig, close=True):
     plt.show()
     if close:
         plt.close(fig.number)
+
 
 if __name__ == '__main__':
     pass

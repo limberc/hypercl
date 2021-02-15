@@ -25,24 +25,24 @@ tasks (e.g., 1D polynomials). Each training consists of several tasks that are
 presented sequentially (i.e., we are considering a continual learning setup).
 """
 # Do not delete the following import for all executable scripts!
-import __init__ # pylint: disable=unused-import
 
-import torch
-import torch.optim as optim
-import torch.nn.functional as F
-from torch import nn
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 from warnings import warn
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
+from torch import nn
+
+import utils.hnet_regularizer as hreg
+import utils.optim_step as opstep
 from toy_example import train_utils
+from toy_example.main_model import MainNetwork
 from toy_example.task_recognition_model import RecognitionNet
 from utils import ewc_regularizer as ewc
-from toy_example.main_model import MainNetwork
 
-import utils.optim_step as opstep
-import utils.hnet_regularizer as hreg
 
 def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
          immediate_mse=None, immediate_weights=None, baseline_mse=None,
@@ -81,9 +81,9 @@ def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
         - **immediate_weights**: The given "immediate_weights", potentially
           modified by replacing missing values with current ones.
     """
-    assert(hnet is not None or immediate_weights is None)
+    assert (hnet is not None or immediate_weights is None)
     # Recognition model only makes sense if a hypernetwork is used.
-    assert(rnet is None or hnet is not None)
+    assert (rnet is None or hnet is not None)
 
     print('### Testing all trained tasks ... ###')
 
@@ -122,16 +122,16 @@ def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
                     preds = torch.empty((X.shape[0]), dtype=torch.int64)
 
                     for s in range(X.shape[0]):
-                        x_sample = X[s,:].view(1, -1)
+                        x_sample = X[s, :].view(1, -1)
                         if isinstance(rnet, RecognitionNet):
                             alpha, _, _ = rnet.encode(x_sample)
-                        else: # MainModel
+                        else:  # MainModel
                             alpha, _ = rnet.forward(x_sample)
                         preds[s] = alpha.argmax(dim=1, keepdim=False)
 
                         W = hnet.forward(preds[s])
 
-                        Y[s,:] = mnet.forward(x_sample, W)
+                        Y[s, :] = mnet.forward(x_sample, W)
 
                     num_total += X.shape[0]
                     num_correct += (preds == i).sum().cpu().numpy()
@@ -141,7 +141,7 @@ def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
 
             if config.multi_head:
                 n_y = data.out_shape[0]
-                allowed_outputs = list(range(i*n_y, (i+1)*n_y))
+                allowed_outputs = list(range(i * n_y, (i + 1) * n_y))
                 Y = Y[:, allowed_outputs]
 
             mse[i] = F.mse_loss(Y, T)
@@ -155,7 +155,7 @@ def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
             if immediate_weights is not None:
                 W_curr = torch.cat([d.clone().view(-1) for d in weights])
                 if type(immediate_weights[i]) == int:
-                    assert(immediate_weights[i] == -1)
+                    assert (immediate_weights[i] == -1)
                     immediate_weights[i] = W_curr
                 else:
                     W_immediate = immediate_weights[i]
@@ -172,16 +172,16 @@ def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
 
     plt.figure()
     plt.title('Current MSE on each task.')
-    plt.scatter(np.arange(1, n+1), mse, label='Current MSE')
+    plt.scatter(np.arange(1, n + 1), mse, label='Current MSE')
     if immediate_mse is not None:
-        plt.scatter(np.arange(1, n+1), immediate_mse[:n], label='Immediate MSE',
+        plt.scatter(np.arange(1, n + 1), immediate_mse[:n], label='Immediate MSE',
                     marker='x')
     if baseline_mse is not None:
         for k, v in baseline_mse.items():
             plt.scatter(np.arange(1, n + 1), v[:n], label=k, marker='+')
     plt.ylabel('MSE')
     plt.xlabel('Task')
-    plt.xticks(np.arange(1, n+1))
+    plt.xticks(np.arange(1, n + 1))
     plt.legend()
     if save_fig:
         plt.savefig(os.path.join(config.out_dir, '%d_tasks_mse' % n),
@@ -207,6 +207,7 @@ def test(data_handlers, mnet, hnet, device, config, writer, rnet=None, \
     print('### Testing all trained tasks ... Done ###')
 
     return mse, immediate_mse, immediate_weights
+
 
 def evaluate(task_id, data, mnet, hnet, device, config, writer,
              train_iter=None):
@@ -250,18 +251,19 @@ def evaluate(task_id, data, mnet, hnet, device, config, writer,
 
         if config.multi_head:
             n_y = data.out_shape[0]
-            allowed_outputs = list(range(task_id*n_y, (task_id+1)*n_y))
+            allowed_outputs = list(range(task_id * n_y, (task_id + 1) * n_y))
             Y = Y[:, allowed_outputs]
 
         mse = F.mse_loss(Y, T)
 
         print('Eval - MSE loss: %f.' % (mse))
 
-        #data.plot_samples('Evaluation at train iter %d' % train_iter,
+        # data.plot_samples('Evaluation at train iter %d' % train_iter,
         #                  X.data.cpu().numpy(), outputs=T.data.cpu().numpy(),
         #                  predictions=Y.data.cpu().numpy())
         if not config.no_plots:
             data.plot_predictions([X.data.cpu().numpy(), Y.data.cpu().numpy()])
+
 
 def evaluate_rnet(task_id, data, rnet, device, config, writer, train_iter):
     """Evaluate the performance of the recognition model during training on a
@@ -303,6 +305,7 @@ def evaluate_rnet(task_id, data, rnet, device, config, writer, train_iter):
         writer.add_scalar('val_ae/task_%d/mse' % task_id, mse, train_iter)
         writer.add_scalar('val_ae/task_%d/accuracy' % task_id, acc, train_iter)
 
+
 def calc_reg_masks(data_handlers, mnet, device, config):
     """Compute the regularizer mask for each task when using a multi-head setup.
     See method "get_reg_masks" of class "MainNetwork" for more details.
@@ -318,23 +321,24 @@ def calc_reg_masks(data_handlers, mnet, device, config):
     Returns:
         A list of regularizer masks.
     """
-    assert(config.multi_head and config.masked_reg)
+    assert (config.multi_head and config.masked_reg)
 
     warn('"calc_reg_masks" is deprecated and not maintained as it is unused ' +
          'currently.', DeprecationWarning)
 
-    assert(mnet.has_fc_out)
+    assert (mnet.has_fc_out)
     main_shapes = mnet.hyper_shapes
 
     masks = []
     for i, data in enumerate(data_handlers):
         n_y = data.out_shape[0]
-        allowed_outputs = list(range(i*n_y, (i+1)*n_y))
+        allowed_outputs = list(range(i * n_y, (i + 1) * n_y))
 
         masks.append(MainNetwork.get_reg_masks(main_shapes, allowed_outputs,
                                                device, use_bias=mnet.has_bias))
 
     return masks
+
 
 def train_reg(task_id, data, mnet, hnet, device, config, writer):
     r"""Train the network using the task-specific loss plus a regularizer that
@@ -360,8 +364,8 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
     regged_outputs = None
     if config.multi_head:
         n_y = data.out_shape[0]
-        out_head_inds = [list(range(i*n_y, (i+1)*n_y)) for i in
-                         range(task_id+1)]
+        out_head_inds = [list(range(i * n_y, (i + 1) * n_y)) for i in
+                         range(task_id + 1)]
         # Outputs to be regularized.
         regged_outputs = out_head_inds[:-1] if config.masked_reg else None
     allowed_outputs = out_head_inds[task_id] if config.multi_head else None
@@ -384,8 +388,8 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
 
     regularized_params = list(hnet.theta)
     if task_id > 0 and config.plastic_prev_tembs:
-        assert(config.reg == 0)
-        for i in range(task_id): # for all previous task embeddings
+        assert (config.reg == 0)
+        for i in range(task_id):  # for all previous task embeddings
             regularized_params.append(hnet.get_task_emb(i))
     theta_optimizer = optim.Adam(regularized_params, lr=config.lr_hyper)
     # We only optimize the task embedding corresponding to the current task,
@@ -433,8 +437,8 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
         emb_optimizer.step()
 
         # DELETEME check correctness of opstep.calc_delta_theta.
-        #dPrev = torch.cat([d.data.clone().view(-1) for d in hnet.theta])
-        #dT_estimate = torch.cat([d.view(-1).clone() for d in
+        # dPrev = torch.cat([d.data.clone().view(-1) for d in hnet.theta])
+        # dT_estimate = torch.cat([d.view(-1).clone() for d in
         #    opstep.calc_delta_theta(theta_optimizer,
         #                            config.use_sgd_change, lr=config.lr_hyper,
         #                            detach_dt=not config.backprop_dt)])
@@ -448,8 +452,8 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
                                         hnet.theta])
 
             dTheta = opstep.calc_delta_theta(theta_optimizer,
-                config.use_sgd_change, lr=config.lr_hyper,
-                detach_dt=not config.backprop_dt)
+                                             config.use_sgd_change, lr=config.lr_hyper,
+                                             detach_dt=not config.backprop_dt)
             if config.plastic_prev_tembs:
                 dTembs = dTheta[-task_id:]
                 dTheta = dTheta[:-task_id]
@@ -458,17 +462,17 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
 
             if config.reg == 0:
                 loss_reg = hreg.calc_fix_target_reg(hnet, task_id,
-                    targets=targets, dTheta=dTheta, dTembs=dTembs, mnet=mnet,
-                    inds_of_out_heads=regged_outputs,
-                    fisher_estimates=fisher_ests)
+                                                    targets=targets, dTheta=dTheta, dTembs=dTembs, mnet=mnet,
+                                                    inds_of_out_heads=regged_outputs,
+                                                    fisher_estimates=fisher_ests)
             elif config.reg == 1:
                 loss_reg = hreg.calc_value_preserving_reg(hnet, task_id, dTheta)
             elif config.reg == 2:
                 loss_reg = hreg.calc_jac_reguarizer(hnet, task_id, dTheta,
                                                     device)
-            elif config.reg == 3: # EWC
+            elif config.reg == 3:  # EWC
                 loss_reg = ewc.ewc_regularizer(task_id, hnet.theta, None,
-                    hnet=hnet, online=config.online_ewc, gamma=config.gamma)
+                                               hnet=hnet, online=config.online_ewc, gamma=config.gamma)
             loss_reg *= config.beta
 
             loss_reg.backward()
@@ -478,19 +482,19 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
                 # Grad of regularizer.
                 grad_diff = grad_full - grad_tloss
                 grad_diff_norm = torch.norm(grad_diff, 2)
-                
+
                 # Cosine between regularizer gradient and task-specific
                 # gradient.
                 dT_vec = torch.cat([d.view(-1).clone() for d in dTheta])
-                grad_cos = F.cosine_similarity(grad_diff.view(1,-1),
-                                               dT_vec.view(1,-1))
+                grad_cos = F.cosine_similarity(grad_diff.view(1, -1),
+                                               dT_vec.view(1, -1))
 
         theta_optimizer.step()
 
         # DELETEME
-        #dCurr = torch.cat([d.data.view(-1) for d in hnet.theta])
-        #dT_actual = dCurr - dPrev
-        #print(torch.norm(dT_estimate - dT_actual, 2))
+        # dCurr = torch.cat([d.data.view(-1) for d in hnet.theta])
+        # dT_actual = dCurr - dPrev
+        # print(torch.norm(dT_estimate - dT_actual, 2))
 
         if i % 10 == 0:
             writer.add_scalar('train/task_%d/mse_loss' % task_id, loss_task, i)
@@ -513,9 +517,9 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
     if config.reg == 3:
         ## Estimate diagonal Fisher elements.
         ewc.compute_fisher(task_id, data, hnet.theta, device, mnet, hnet=hnet,
-            empirical_fisher=True, online=config.online_ewc, gamma=config.gamma,
-            n_max=config.n_fisher, regression=True,
-            allowed_outputs=allowed_outputs)
+                           empirical_fisher=True, online=config.online_ewc, gamma=config.gamma,
+                           n_max=config.n_fisher, regression=True,
+                           allowed_outputs=allowed_outputs)
 
     if config.ewc_weight_importance:
         ## Estimate Fisher for outputs of the hypernetwork.
@@ -529,10 +533,11 @@ def train_reg(task_id, data, mnet, hnet, device, config, writer):
             fake_main_params[i].data = weights[i]
 
         ewc.compute_fisher(task_id, data, fake_main_params, device, mnet,
-            empirical_fisher=True, online=False, n_max=config.n_fisher,
-            regression=True, allowed_outputs=allowed_outputs)
+                           empirical_fisher=True, online=False, n_max=config.n_fisher,
+                           regression=True, allowed_outputs=allowed_outputs)
 
     print('Training network ... Done')
+
 
 def train_proximal(task_id, data, mnet, hnet, device, config, writer):
     r"""Train the hypernetwork via a proximal algorithm. Hence, we don't optimize
@@ -568,8 +573,8 @@ def train_proximal(task_id, data, mnet, hnet, device, config, writer):
     regged_outputs = None
     if config.multi_head:
         n_y = data.out_shape[0]
-        out_head_inds = [list(range(i*n_y, (i+1)*n_y)) for i in
-                         range(task_id+1)]
+        out_head_inds = [list(range(i * n_y, (i + 1) * n_y)) for i in
+                         range(task_id + 1)]
         # Outputs to be regularized.
         regged_outputs = out_head_inds[:-1] if config.masked_reg else None
     allowed_outputs = out_head_inds[task_id] if config.multi_head else None
@@ -620,10 +625,10 @@ def train_proximal(task_id, data, mnet, hnet, device, config, writer):
         # Reset optimizer state in every new iteration:
         # This only seems to hurt, even if dTheta is reset to zero every
         # training iteration.
-        #dtheta_optimizer = optim.Adam(dTheta, lr=config.lr_hyper)
+        # dtheta_optimizer = optim.Adam(dTheta, lr=config.lr_hyper)
 
         # Train dTheta
-        dT_loss_vals = [] # For visualizations.
+        dT_loss_vals = []  # For visualizations.
         for n in range(config.n_steps):
             dtheta_optimizer.zero_grad()
 
@@ -640,12 +645,12 @@ def train_proximal(task_id, data, mnet, hnet, device, config, writer):
             l2_reg = dTheta_norm
 
             # Continual learning regularizer.
-            cl_reg = torch.zeros(()) # Scalar 0
+            cl_reg = torch.zeros(())  # Scalar 0
             if task_id > 0 and config.beta > 0:
                 if config.reg == 0:
                     cl_reg = hreg.calc_fix_target_reg(hnet, task_id,
-                        targets=targets, dTheta=dTheta, mnet=mnet,
-                        inds_of_out_heads=regged_outputs)
+                                                      targets=targets, dTheta=dTheta, mnet=mnet,
+                                                      inds_of_out_heads=regged_outputs)
                 elif config.reg == 1:
                     cl_reg = hreg.calc_value_preserving_reg(hnet, task_id,
                                                             dTheta)
@@ -687,9 +692,9 @@ def train_proximal(task_id, data, mnet, hnet, device, config, writer):
             if config.n_steps == 1:
                 inds = [0]
             elif config.n_steps == 2:
-                inds = [0, config.n_steps-1]
+                inds = [0, config.n_steps - 1]
             else:
-                inds = [0, config.n_steps // 2, config.n_steps-1]
+                inds = [0, config.n_steps // 2, config.n_steps - 1]
 
             for ii in inds:
                 ltask, ll2, lcl, l = dT_loss_vals[ii]
@@ -703,6 +708,7 @@ def train_proximal(task_id, data, mnet, hnet, device, config, writer):
                                   (task_id, ii), l, i)
 
     print('Training network ... Done')
+
 
 def train_rnet(task_id, data, rnet, device, config, writer):
     r"""Train the recognition network. This means, that the encoder should be
@@ -752,14 +758,14 @@ def train_rnet(task_id, data, rnet, device, config, writer):
         loss_ce = 0
         loss_pm = 0
 
-        for t in range(task_id+1):
+        for t in range(task_id + 1):
             # Task recognition targets:
             T = torch.ones(config.batch_size, dtype=torch.int64).to(device) * t
 
             if t == task_id:
                 batch = data.next_train_batch(config.batch_size)
                 X = data.input_to_torch_tensor(batch[0], device, mode='train')
-            else: # Generate fake data.
+            else:  # Generate fake data.
                 # We simply use samples from the prior as possible latent space
                 # realizations for the current task.
                 z_fake = rnet.prior_samples(config.batch_size).to(device)
@@ -770,7 +776,7 @@ def train_rnet(task_id, data, rnet, device, config, writer):
                 alpha_fake[:, t] = 1.
 
                 X = rnet.decode(alpha_fake, z_fake,
-                    decoder_weights=replay_weights).detach().clone()
+                                decoder_weights=replay_weights).detach().clone()
 
             alpha, nu_z, z, log_alpha = rnet.encode(X, ret_log_alpha=True)
             X_rec = rnet.decode(alpha, z)
@@ -792,8 +798,8 @@ def train_rnet(task_id, data, rnet, device, config, writer):
                     writer.add_histogram('train_ae/task_%d/replay_%d' %
                                          (task_id, t), X[:, 0], i)
 
-        loss = 1. / (task_id+1) * (loss_rec + config.ae_beta_ce * loss_ce +
-                                              config.ae_beta_pm * loss_pm)
+        loss = 1. / (task_id + 1) * (loss_rec + config.ae_beta_ce * loss_ce +
+                                     config.ae_beta_pm * loss_pm)
         loss.backward()
         optimizer.step()
 
@@ -807,6 +813,7 @@ def train_rnet(task_id, data, rnet, device, config, writer):
                               loss_pm, i)
 
     print('Training recognition network ... Done')
+
 
 def run():
     """Run the script
@@ -828,7 +835,7 @@ def run():
 
     ### Generate networks.
     mnet, hnet, rnet = train_utils._generate_networks(config, dhandlers,
-        device, create_rnet=config.use_task_detection)
+                                                      device, create_rnet=config.use_task_detection)
 
     ### Train on tasks sequentially.
     immediate_mse = np.ones(num_tasks) * -1.
@@ -844,14 +851,14 @@ def run():
                              0.001513198047178],
         'Immediate MSE - No reg': [0.000851554065594, 0.000517978944117,
                                    0.001182764337864],
-        #'Current MSE - No reg': [4.52972555160522, 5.12006094455719,
+        # 'Current MSE - No reg': [4.52972555160522, 5.12006094455719,
         #                         0.001182764337864], # Fine-tuning
-        'From scratch': [0.000851554065594,0.00098702138057,0.001293907815125]
+        'From scratch': [0.000851554065594, 0.00098702138057, 0.001293907815125]
     }
     baselines = dict()
 
     for i in range(num_tasks):
-        print('### Training on task %d ###' % (i+1))
+        print('### Training on task %d ###' % (i + 1))
         data = dhandlers[i]
         # Train the network.
         if config.use_proximal_alg:
@@ -863,29 +870,30 @@ def run():
         # independent of the hypernetwork or the task embeddings. Hence, to keep
         # the code clean, we can train it separately.
         if config.use_task_detection:
-            print('# Training recognition model for task %d' % (i+1))
+            print('# Training recognition model for task %d' % (i + 1))
             train_rnet(i, data, rnet, device, config, writer)
 
             ### Test networks with recognition network..
             current_rnet_mse, _, _ = test(dhandlers[:(i + 1)], mnet, hnet,
-                device, config, writer, rnet=rnet, save_fig=False)
+                                          device, config, writer, rnet=rnet, save_fig=False)
             baselines['Current MSE: Task Recognition'] = current_rnet_mse
 
-            if i == num_tasks-1:
+            if i == num_tasks - 1:
                 print('Final MSE values after training on all tasks using ' +
                       'task recognition %s' % str(current_rnet_mse))
 
         ### Test networks.
-        current_mse, immediate_mse, immediate_weights = test(dhandlers[:(i+1)],
-            mnet, hnet, device, config, writer, rnet=None,
-            immediate_mse=immediate_mse, immediate_weights=immediate_weights,
-            baseline_mse = baselines
-            #baseline_mse=None if i != num_tasks-1 else baselines)
-            )
+        current_mse, immediate_mse, immediate_weights = test(dhandlers[:(i + 1)],
+                                                             mnet, hnet, device, config, writer, rnet=None,
+                                                             immediate_mse=immediate_mse,
+                                                             immediate_weights=immediate_weights,
+                                                             baseline_mse=baselines
+                                                             # baseline_mse=None if i != num_tasks-1 else baselines)
+                                                             )
 
-        if config.train_from_scratch and i < num_tasks-1:
+        if config.train_from_scratch and i < num_tasks - 1:
             mnet, hnet, rnet = train_utils._generate_networks(config, dhandlers,
-                device, create_rnet=config.use_task_detection)
+                                                              device, create_rnet=config.use_task_detection)
 
     print('Immediate MSE values after training each task: %s' % \
           np.array2string(immediate_mse, precision=5, separator=','))
@@ -900,6 +908,6 @@ def run():
 
     return current_mse, immediate_mse, current_rnet_mse
 
+
 if __name__ == '__main__':
     _, _, _ = run()
-

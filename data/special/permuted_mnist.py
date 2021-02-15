@@ -30,6 +30,7 @@ import copy
 
 from data.mnist_data import MNISTData
 
+
 class PermutedMNISTList():
     """A list of permuted MNIST tasks that only uses a single instance of class
     :class:`PermutedMNIST`.
@@ -100,13 +101,14 @@ class PermutedMNISTList():
             ensured. **Note** You may never work with two elements of this
             list at a time.
     """
+
     def __init__(self, permutations, data_path, use_one_hot=True,
                  validation_size=0, padding=0, show_perm_change_msg=True):
         print('Loading MNIST into memory, that is shared among %d permutation '
               % (len(permutations)) + 'tasks.')
 
         self._data = PermutedMNIST(data_path, use_one_hot=use_one_hot,
-            validation_size=validation_size, permutation=None, padding=padding)
+                                   validation_size=validation_size, permutation=None, padding=padding)
 
         self._permutations = permutations
 
@@ -129,8 +131,8 @@ class PermutedMNISTList():
         color_start = '\033[93m'
         color_end = '\033[0m'
         help_msg = 'To disable this message, disable the flag ' + \
-            '"show_perm_change_msg" when calling the constructor of class ' + \
-            'classifier.permuted_mnist.PermutedMNISTList.'
+                   '"show_perm_change_msg" when calling the constructor of class ' + \
+                   'classifier.permuted_mnist.PermutedMNISTList.'
         ####################
 
         if isinstance(index, slice):
@@ -149,7 +151,7 @@ class PermutedMNISTList():
 
             return new_list
 
-        assert(isinstance(index, int))
+        assert (isinstance(index, int))
         self._data.permutation = self._permutations[index]
         self._data.reset_batch_generator()
 
@@ -172,6 +174,7 @@ class PermutedMNISTList():
     def __delitem__(self, key):
         """Not implemented."""
         raise NotImplementedError('Not yet implemented!')
+
 
 class PermutedMNIST(MNISTData):
     """An instance of this class shall represent the permuted MNIST dataset,
@@ -212,15 +215,16 @@ input_to_torch_tensor`.
                 is only applied to torch tensors. See attribute
                 :attr:`torch_in_shape`.
     """
+
     def __init__(self, data_path, use_one_hot=True, validation_size=0,
                  permutation=None, padding=0):
         super().__init__(data_path, use_one_hot=use_one_hot,
                          validation_size=validation_size)
 
         self._padding = padding
-        self._input_dim = (28+padding*2)**2
+        self._input_dim = (28 + padding * 2) ** 2
 
-        self.permutation = permutation # See setter below.
+        self.permutation = permutation  # See setter below.
 
     @property
     def permutation(self):
@@ -265,7 +269,7 @@ input_to_torch_tensor`.
 
             from torch import stack
 
-            img_size = 28 + 2*self._padding
+            img_size = 28 + 2 * self._padding
 
             # Transform the numpy data into a representation as expected by the
             # ToPILImage transformation.
@@ -280,13 +284,13 @@ input_to_torch_tensor`.
             # user gets a tensor in the same shape as always and does not have to
             # deal with cases.
             x = x.permute(0, 2, 3, 1)
-            x = x.contiguous().view(-1, img_size**2)
+            x = x.contiguous().view(-1, img_size ** 2)
 
             return x
 
         else:
             return MNISTData.input_to_torch_tensor(self, x, device, mode=mode,
-                force_no_preprocessing=force_no_preprocessing)
+                                                   force_no_preprocessing=force_no_preprocessing)
 
     @staticmethod
     def torch_input_transforms(permutation=None, padding=0):
@@ -329,6 +333,7 @@ input_to_torch_tensor`.
         OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
         SOFTWARE.
         """
+
         def _permutate_image_pixels(image, permutation):
             '''Permutate the pixels of an image according to 'permutation'.
 
@@ -367,6 +372,7 @@ input_to_torch_tensor`.
         # PyTorch tensors. Internally, we store normal MNIST images.
         raise NotImplementedError('No Tensorflow support for this class ' +
                                   'implemented.')
+
 
 if __name__ == '__main__':
     pass

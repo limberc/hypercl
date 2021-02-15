@@ -42,6 +42,7 @@ weights), one would have to prodvide two distinct implementations:
       parameters inside modules that fulfill no other purpose.
 """
 import math
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -51,6 +52,7 @@ from mnets.mnet_interface import MainNetInterface
 from utils import init_utils as iutils
 from utils.module_wrappers import CLHyperNetInterface
 from utils.torch_utils import init_params
+
 
 class HyperNetwork(nn.Module, CLHyperNetInterface):
     """This network consists of a series of fully-connected layers to generate
@@ -65,12 +67,13 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
                 The feedback matrix is stored in this class as a temporary
                 solution. In the future it will be moved somewhere else.
     """
+
     def __init__(self, target_shapes, num_tasks, layers=[50, 100], verbose=True,
                  te_dim=8, no_te_embs=False, activation_fn=torch.nn.ReLU(),
                  use_bias=True, no_weights=False, init_weights=None,
                  ce_dim=None, dropout_rate=-1, use_spectral_norm=False,
                  create_feedback_matrix=False, target_net_out_dim=10,
-                 random_scale_feedback_matrix = 1.,
+                 random_scale_feedback_matrix=1.,
                  use_batch_norm=False, noise_dim=-1, temb_std=-1):
         """Build the network. The network will consist of several hidden layers
         and a dedicated output layer for each weight matrix/bias vector.
@@ -137,7 +140,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
                 the perturbation of the task embedding will be shared.
         """
         # FIXME find a way using super to handle multiple inheritence.
-        #super(HyperNetwork, self).__init__()
+        # super(HyperNetwork, self).__init__()
         nn.Module.__init__(self)
         CLHyperNetInterface.__init__(self)
 
@@ -156,11 +159,11 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
             raise NotImplementedError('Batch normalization not yet ' +
                                       'implemented for this hypernetwork type.')
 
-        assert(len(target_shapes) > 0)
-        assert(no_te_embs or num_tasks > 0)
+        assert (len(target_shapes) > 0)
+        assert (no_te_embs or num_tasks > 0)
         self._num_tasks = num_tasks
 
-        assert(init_weights is None or no_weights is False)
+        assert (init_weights is None or no_weights is False)
         self._no_weights = no_weights
         self._no_te_embs = no_te_embs
         self._te_dim = te_dim
@@ -173,7 +176,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         self._dropout_rate = dropout_rate
         self._noise_dim = noise_dim
         self._temb_std = temb_std
-        self._shifts = None # FIXME temporary test.
+        self._shifts = None  # FIXME temporary test.
 
         ### Hidden layers
         self._gen_layers(layers, te_dim, use_bias, no_weights, init_weights,
@@ -185,7 +188,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
 
         self._dropout = None
         if dropout_rate != -1:
-            assert(dropout_rate >= 0 and dropout_rate <= 1)
+            assert (dropout_rate >= 0 and dropout_rate <= 1)
             self._dropout = nn.Dropout(dropout_rate)
 
         # Task embeddings.
@@ -202,7 +205,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
 
         ntheta = MainNetInterface.shapes_to_num_weights(self._theta_shapes)
         ntembs = int(np.sum([t.numel() for t in self._task_embs])) \
-                if not no_te_embs else 0
+            if not no_te_embs else 0
         self._num_weights = ntheta + ntembs
 
         self._num_outputs = MainNetInterface.shapes_to_num_weights( \
@@ -210,14 +213,14 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
 
         if verbose:
             print('Constructed hypernetwork with %d parameters (' % (ntheta \
-                  + ntembs) + '%d network weights + %d task embedding weights).'
+                                                                     + ntembs) + '%d network weights + %d task embedding weights).'
                   % (ntheta, ntembs))
             print('The hypernetwork has a total of %d outputs.'
                   % self._num_outputs)
 
         self._is_properly_setup()
 
-    def _create_feedback_matrix(self, target_shapes, target_net_out_dim, 
+    def _create_feedback_matrix(self, target_shapes, target_net_out_dim,
                                 random_scale_feedback_matrix):
         """Create a feeback matrix for credit assignment as an alternative
         to backprop.
@@ -235,7 +238,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         s = random_scale_feedback_matrix
         self._feedback_matrix = []
         for k in target_shapes:
-            dims =  [target_net_out_dim] + k    
+            dims = [target_net_out_dim] + k
             self._feedback_matrix.append(torch.empty(dims).uniform_(-s, s))
 
     @property
@@ -330,12 +333,12 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         if theta is None:
             theta = self.theta
         else:
-            assert(len(theta) == len(self.theta_shapes))
+            assert (len(theta) == len(self.theta_shapes))
             for i, s in enumerate(self.theta_shapes):
-                assert(np.all(np.equal(s, list(theta[i].shape))))
+                assert (np.all(np.equal(s, list(theta[i].shape))))
 
         if dTheta is not None:
-            assert(len(dTheta) == len(self.theta_shapes))
+            assert (len(dTheta) == len(self.theta_shapes))
 
             weights = []
             for i, t in enumerate(theta):
@@ -387,7 +390,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         for i in range(0, len(self._hidden_dims), 2 if self._use_bias else 1):
             b = None
             if self._use_bias:
-                b = weights[i+1]
+                b = weights[i + 1]
             h = F.linear(h, weights[i], bias=b)
             if self._act_fn is not None:
                 h = self._act_fn(h)
@@ -399,12 +402,12 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
                        2 if self._use_bias else 1):
             b = None
             if self._use_bias:
-                b = weights[i+1]
+                b = weights[i + 1]
             W = F.linear(h, weights[i], bias=b)
             W = W.view(batch_size, *self.target_shapes[j])
             if squeeze:
                 W = torch.squeeze(W, dim=0)
-            if self._shifts is not None: # FIXME temporary test!
+            if self._shifts is not None:  # FIXME temporary test!
                 W += self._shifts[j]
             outputs.append(W)
             j += 1
@@ -558,14 +561,14 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         ### Compute input variance ###
         if self._temb_std != -1:
             # Sum of uncorrelated variables.
-            temb_var += self._temb_std**2
+            temb_var += self._temb_std ** 2
 
         assert self._size_ext_input is None or self._size_ext_input > 0
         assert self._noise_dim == -1 or self._noise_dim > 0
 
         inp_dim = self._te_dim + \
-            (self._size_ext_input if self._size_ext_input is not None else 0) \
-            + (self._noise_dim if self._noise_dim != -1 else 0)
+                  (self._size_ext_input if self._size_ext_input is not None else 0) \
+                  + (self._noise_dim if self._noise_dim != -1 else 0)
 
         input_variance = (self._te_dim / inp_dim) * temb_var
         if self._size_ext_input is not None:
@@ -581,7 +584,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         # property, that we preserve the input variance.
 
         for i in range(0, len(self._hidden_dims), 2 if self._use_bias else 1):
-            #W = self.theta[i]
+            # W = self.theta[i]
             if use_xavier:
                 iutils.xavier_fan_in_(self.theta[i])
             else:
@@ -589,8 +592,8 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
                                                nonlinearity='relu')
 
             if self._use_bias:
-                #b = self.theta[i+1]
-                torch.nn.init.constant_(self.theta[i+1], 0)
+                # b = self.theta[i+1]
+                torch.nn.init.constant_(self.theta[i + 1], 0)
 
         ### Initialize output heads ###
         c_relu = 1 if use_xavier else 2
@@ -602,7 +605,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
                 c_bias = 2
                 break
         # This is how we should do it instead.
-        #c_bias = 2 if mnet.has_bias else 1
+        # c_bias = 2 if mnet.has_bias else 1
 
         j = 0
         for i in range(len(self._hidden_dims), len(self._theta_shapes),
@@ -612,8 +615,8 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
             # layers (called gamma and beta in the paper) are simply initialized
             # to zero.
             if self._use_bias:
-                #b = self.theta[i+1]
-                torch.nn.init.constant_(self.theta[i+1], 0)
+                # b = self.theta[i+1]
+                torch.nn.init.constant_(self.theta[i + 1], 0)
 
             # We are not interested in the fan-out, since the fan-out is just
             # the number of elements in the corresponding main network tensor.
@@ -626,22 +629,22 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
 
             # FIXME 1D output tensors don't need to be bias vectors. They can
             # be arbitrary embeddings or, for instance, batchnorm weights.
-            if len(out_shape) == 1: # Assume output is bias vector.
+            if len(out_shape) == 1:  # Assume output is bias vector.
                 m_fan_out = out_shape[0]
 
                 # NOTE For the hyperfan-out init, we also need to know the
                 # fan-in of the layer.
                 # FIXME We have no proper way at the moment to get the correct
                 # fan-in of the layer this bias vector belongs to.
-                if j > 0 and len(self.target_shapes[j-1]) > 1:
+                if j > 0 and len(self.target_shapes[j - 1]) > 1:
                     m_fan_in, _ = iutils.calc_fan_in_and_out( \
-                        self.target_shapes[j-1])
+                        self.target_shapes[j - 1])
                 else:
                     # FIXME Quick-fix.
                     m_fan_in = m_fan_out
 
                 var_in = c_relu / (2. * fan_in * input_variance)
-                num = c_relu * (1. - m_fan_in/m_fan_out)
+                num = c_relu * (1. - m_fan_in / m_fan_out)
                 denom = fan_in * input_variance
                 var_out = max(0, num / denom)
 
@@ -656,7 +659,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
             elif method == 'out':
                 var = var_out
             elif method == 'harmonic':
-                var = 2 * (1./var_in + 1./var_out)
+                var = 2 * (1. / var_in + 1. / var_out)
             else:
                 raise ValueError('Method %s invalid.' % method)
 
@@ -664,8 +667,9 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
             std = math.sqrt(var)
             a = math.sqrt(3.0) * std
             torch.nn.init._no_grad_uniform_(self.theta[i], -a, a)
-            
+
             j += 1
+
 
 if __name__ == '__main__':
     pass

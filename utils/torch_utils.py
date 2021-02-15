@@ -24,8 +24,10 @@ A collection of helper functions that should capture common functionalities
 needed when working with PyTorch.
 """
 import math
+
 import torch
 from torch import nn
+
 
 def init_params(weights, bias=None):
     """Initialize the weights and biases of a linear or (transpose) conv layer.
@@ -47,6 +49,7 @@ def init_params(weights, bias=None):
         fan_in, _ = nn.init._calculate_fan_in_and_fan_out(weights)
         bound = 1 / math.sqrt(fan_in)
         nn.init.uniform_(bias, -bound, bound)
+
 
 def get_optimizer(params, lr, momentum=0, weight_decay=0, use_adam=False,
                   adam_beta1=0.9, use_rmsprop=False, use_adadelta=False,
@@ -90,7 +93,6 @@ def get_optimizer(params, lr, momentum=0, weight_decay=0, use_adam=False,
 
     return optimizer
 
+
 if __name__ == '__main__':
     pass
-
-

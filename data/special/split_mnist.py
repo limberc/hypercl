@@ -30,6 +30,7 @@ import numpy as np
 
 from data.mnist_data import MNISTData
 
+
 def get_split_MNIST_handlers(data_path, use_one_hot=True, validation_size=0,
                              steps=2):
     """This method instantiates 5 objects of the class :class:`SplitMNIST` which
@@ -54,14 +55,15 @@ def get_split_MNIST_handlers(data_path, use_one_hot=True, validation_size=0,
     print('Creating data handlers for SplitMNIST tasks ...')
 
     handlers = []
-    assert(steps == 1 or steps == 2)
+    assert (steps == 1 or steps == 2)
     for i in range(0, 10, steps):
         handlers.append(SplitMNIST(data_path, use_one_hot=use_one_hot,
-            validation_size=validation_size, labels=[i, i+steps-1]))
+                                   validation_size=validation_size, labels=[i, i + steps - 1]))
 
     print('Creating data handlers for SplitMNIST tasks ... Done')
 
     return handlers
+
 
 class SplitMNIST(MNISTData):
     """An instance of the class shall represent a SplitMNIST task.
@@ -80,12 +82,13 @@ class SplitMNIST(MNISTData):
             :attr:`data.dataset.Dataset.num_classes` and
             :attr:`data.dataset.Dataset.out_shape`.
     """
+
     def __init__(self, data_path, use_one_hot=False, validation_size=1000,
                  labels=[0, 1], full_out_dim=False):
         super().__init__(data_path, use_one_hot=use_one_hot, validation_size=0)
 
         K = len(labels)
-        #assert(K == 2)
+        # assert(K == 2)
 
         self._labels = labels
 
@@ -130,7 +133,7 @@ class SplitMNIST(MNISTData):
                               train_outs.shape[0] + test_outs.shape[0])
 
         outputs = np.concatenate([train_outs, test_outs], axis=0)
-        
+
         if not full_out_dim:
             # Transform outputs, e.g., if 1-hot [0,0,0,1,0,0,0,0,0,0] -> [0,1]
             outputs = self.transform_outputs(outputs)
@@ -183,7 +186,7 @@ class SplitMNIST(MNISTData):
         """
         labels = self._labels
         if self.is_one_hot:
-            assert(outputs.shape[1] == self._data['num_classes'])
+            assert (outputs.shape[1] == self._data['num_classes'])
             mask = np.zeros(self._data['num_classes'], dtype=np.bool)
             mask[labels] = True
 
@@ -198,6 +201,7 @@ class SplitMNIST(MNISTData):
     def get_identifier(self):
         """Returns the name of the dataset."""
         return 'SplitMNIST'
+
 
 if __name__ == '__main__':
     pass

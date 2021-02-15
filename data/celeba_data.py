@@ -35,14 +35,16 @@ of the README file (which is located in the same folder as this file).
 **Note, this dataset has not yet been prepared for PyTorch use!**
 """
 
-import numpy as np
 import os
 import sys
 import time
 from collections import defaultdict
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from data.large_img_dataset import LargeImgDataset
+
 
 class CelebAData(LargeImgDataset):
     """An instance of the class shall represent the CelebA dataset.
@@ -83,7 +85,7 @@ class CelebAData(LargeImgDataset):
     _ORIG_IMGS = os.path.join(_IMG, 'img_celeba.7z')
     _PNG_IMGS = os.path.join(_IMG, 'img_align_celeba_png.7z')
     _JPG_IMGS = os.path.join(_IMG, 'img_align_celeba')
-    
+
     def __init__(self, data_path, use_png=False, shape=None):
         if use_png:
             imgs_path = os.path.join(data_path, CelebAData._PNG_IMGS)
@@ -103,19 +105,19 @@ class CelebAData(LargeImgDataset):
         # TODO Download and extract the data.
 
         err_msg = 'Please follow the steps described in the file ' + \
-            'data/README.md to download and extract the data.'
+                  'data/README.md to download and extract the data.'
         if not os.path.exists(root_path):
             raise FileNotFoundError('Dataset not found in directory ' +
-                root_path + '.\n' + err_msg)
+                                    root_path + '.\n' + err_msg)
         elif not os.path.exists(anno_path):
             raise FileNotFoundError('Annotations not found in directory ' +
-                anno_path + '.\n' + err_msg)
+                                    anno_path + '.\n' + err_msg)
         elif not os.path.exists(eval_path):
             raise FileNotFoundError('Partitioning not found in directory ' +
-                eval_path + '.\n' + err_msg)
+                                    eval_path + '.\n' + err_msg)
         elif not os.path.exists(imgs_path):
             raise FileNotFoundError('Images not found in directory ' +
-                imgs_path + '.\n' + err_msg)
+                                    imgs_path + '.\n' + err_msg)
 
         try:
             self._read_dataset(data_path, shape=shape)
@@ -125,7 +127,7 @@ class CelebAData(LargeImgDataset):
                             + 'correctly prepared.\n' + err_msg)
 
         end = time.time()
-        print('Elapsed time to read dataset: %f sec' % (end-start))
+        print('Elapsed time to read dataset: %f sec' % (end - start))
 
     def _read_dataset(self, data_path, shape=None):
         """Read the dataset into memory. Note, the images are not fetched into
@@ -135,6 +137,7 @@ class CelebAData(LargeImgDataset):
             data_path: Where is the relative location of the dataset.
             shape (optional): The shape of the input images.
         """
+
         def to_img_path(filename):
             """The image filenames from file have to be converted, if the png
             format is used.
@@ -142,22 +145,22 @@ class CelebAData(LargeImgDataset):
             if self.png_format_used:
                 filename = os.path.splitext(filename)[0] + '.png'
             return filename
-        
+
         # FIXME If we use the attributes as outputs, then this is a multi-label
         # classification task. Though, we don't capture this case in the
         # Dataset base class yet (it would destroy the current implementation
         # of one hot encodings).
         self._data['classification'] = False
         self._data['sequence'] = False
-        self._data['num_classes'] = 40 # 40 different attributes.
+        self._data['num_classes'] = 40  # 40 different attributes.
         self._data['is_one_hot'] = False
         if shape is not None:
-            assert(len(shape) == 2)
+            assert (len(shape) == 2)
             self._data['in_shape'] = shape + [3]
         else:
             self._data['in_shape'] = [218, 178, 3]
         self._data['out_shape'] = [self._data['num_classes']]
-        
+
         self._data['celeba'] = dict()
 
         # The annotations dict will contain the annotations of each image
@@ -187,23 +190,23 @@ class CelebAData(LargeImgDataset):
         ## Attributes
         # Read the list of attributes. This will become the output of this
         # dataset.
-        attr_fn =  os.path.join(data_path, CelebAData._ATTRIBUTES)
+        attr_fn = os.path.join(data_path, CelebAData._ATTRIBUTES)
 
         with open(attr_fn) as f:
             nis = int(f.readline())
             attr_names = f.readline().split()
             attribute_lines = f.readlines()
 
-        assert(nis == num_imgs)
-        assert(len(attr_names) == self._data['num_classes'])
+        assert (nis == num_imgs)
+        assert (len(attr_names) == self._data['num_classes'])
         self._data['celeba']['attr_names'] = attr_names
 
-        assert(len(attribute_lines) == num_imgs)
+        assert (len(attribute_lines) == num_imgs)
         for i, line in enumerate(attribute_lines):
             words = line.split()
             img_ident = to_img_path(words[0])
             attrs = [int(i) > 0 for i in words[1:]]
-            assert(len(attrs) == self._data['num_classes'])
+            assert (len(attrs) == self._data['num_classes'])
 
             # The actual index of the sample in the dataset.
             annotations[img_ident]['index'] = i
@@ -219,22 +222,22 @@ class CelebAData(LargeImgDataset):
         # Landmarks of aligned and cropped images.
         # The following landmarks are specified for each image:
         # ['lefteye', 'righteye', 'nose', 'leftmouth', 'rightmouth']
-        lm_fn =  os.path.join(data_path, CelebAData._LANDMARKS)
+        lm_fn = os.path.join(data_path, CelebAData._LANDMARKS)
 
         with open(lm_fn) as f:
             nis = int(f.readline())
             lm_names_raw = f.readline().split()
             lm_lines = f.readlines()
 
-        assert(nis == num_imgs)
+        assert (nis == num_imgs)
         # A landmark always consists of an x and y coordinate.
-        assert(len(lm_names_raw) % 2 == 0)
-        assert(len(lm_lines) == num_imgs)
+        assert (len(lm_names_raw) % 2 == 0)
+        assert (len(lm_lines) == num_imgs)
 
         lm_names = []
         for i in range(0, len(lm_names_raw), 2):
-            assert(lm_names_raw[i].endswith('_x') and \
-                   lm_names_raw[i+1].endswith('_y'))
+            assert (lm_names_raw[i].endswith('_x') and \
+                    lm_names_raw[i + 1].endswith('_y'))
             lm_names.append(lm_names_raw[i][:-2])
         self._data['celeba']['landmark_names'] = lm_names
 
@@ -242,22 +245,22 @@ class CelebAData(LargeImgDataset):
             words = line.split()
             img_ident = to_img_path(words[0])
             locs = [int(i) for i in words[1:]]
-            assert(len(locs) == len(lm_names_raw))
+            assert (len(locs) == len(lm_names_raw))
 
             lms = dict()
             for i in range(0, len(locs), 2):
-                lms[lm_names[i//2]] = (locs[i], locs[i+1])
-            
+                lms[lm_names[i // 2]] = (locs[i], locs[i + 1])
+
             annotations[img_ident]['landmarks'] = lms
 
         ## Partitioning
         # Load partitioning (what samples belong to train (0), test (2) and
         # val (1) set?).
-        part_fn =  os.path.join(data_path, CelebAData._PARTITIONS)
+        part_fn = os.path.join(data_path, CelebAData._PARTITIONS)
         with open(part_fn) as f:
             partitions = f.readlines()
 
-        assert(len(partitions) == num_imgs)
+        assert (len(partitions) == num_imgs)
 
         train_inds = []
         test_inds = []
@@ -267,8 +270,8 @@ class CelebAData(LargeImgDataset):
             img_ident = to_img_path(img_ident)
             partition = int(partition)
 
-            assert(i == annotations[img_ident]['index'])
-            
+            assert (i == annotations[img_ident]['index'])
+
             if partition == 0:
                 train_inds.append(i)
             elif partition == 1:
@@ -279,7 +282,7 @@ class CelebAData(LargeImgDataset):
         self._data['train_inds'] = np.asarray(train_inds)
         self._data['test_inds'] = np.asarray(test_inds)
         self._data['val_inds'] = np.asarray(val_inds)
-        assert(len(train_inds) + len(test_inds) + len(val_inds) == num_imgs)
+        assert (len(train_inds) + len(test_inds) + len(val_inds) == num_imgs)
 
         self._data['celeba']['anno'] = annotations
 
@@ -316,7 +319,6 @@ class CelebAData(LargeImgDataset):
         ax.imshow(np.squeeze(np.reshape(img, self.in_shape)))
         fig.add_subplot(ax)
 
+
 if __name__ == '__main__':
     pass
-
-

@@ -35,17 +35,19 @@ Information about the dataset can be retrieved from:
     http://yann.lecun.com/exdb/mnist/
 """
 
+import _pickle as pickle
+import gzip
 import os
 import struct
-import numpy as np
 import time
-import _pickle as pickle
 import urllib.request
-import gzip
-import matplotlib.pyplot as plt
 from warnings import warn
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from data.dataset import Dataset
+
 
 class MNISTData(Dataset):
     """An instance of the class shall represent the MNIST dataset.
@@ -73,14 +75,14 @@ class MNISTData(Dataset):
     _MNIST_DATA_DUMP = 'mnist_dataset.pickle'
     # In which subfolder of the datapath should the data be stored.
     _SUBFOLDER = 'MNIST'
-    
+
     def __init__(self, data_path, use_one_hot=False, validation_size=5000):
         super().__init__()
 
         start = time.time()
 
         print('Reading MNIST dataset ...')
-        
+
         # Actual data path
         data_path = os.path.join(data_path, MNISTData._SUBFOLDER)
 
@@ -104,7 +106,7 @@ class MNISTData(Dataset):
 
                     self._data['is_one_hot'] = use_one_hot
                     self._data['out_data'] = self._to_one_hot(
-                            self._data['out_data'], reverse=reverse)
+                        self._data['out_data'], reverse=reverse)
                     self._data['out_shape'] = [self._data['out_data'].shape[1]]
 
                 # DELETEME A previous version of the dataloader stored the
@@ -113,7 +115,6 @@ class MNISTData(Dataset):
                 if self.num_val_samples != 0:
                     build_from_scratch = True
                     self._data['val_inds'] = None
-
 
         if build_from_scratch:
             train_images_fn = os.path.join(data_path, MNISTData._TRAIN_IMGS_FN)
@@ -128,7 +129,7 @@ class MNISTData(Dataset):
                                            train_images_fn)
 
                 ## Extract downloaded images.
-                #with gzip.open(train_images_fn, 'rb') as f_in:
+                # with gzip.open(train_images_fn, 'rb') as f_in:
                 #     with open(os.path.splitext(train_images_fn)[0], \
                 #               'wb') as f_out:
                 #         shutil.copyfileobj(f_in, f_out)
@@ -158,14 +159,14 @@ class MNISTData(Dataset):
             # read images
             train_inputs = MNISTData._read_images(train_images_fn)
             test_inputs = MNISTData._read_images(test_images_fn)
-            
-            assert(train_labels.shape[0] == train_inputs.shape[0])
-            assert(test_labels.shape[0] == test_inputs.shape[0])
+
+            assert (train_labels.shape[0] == train_inputs.shape[0])
+            assert (test_labels.shape[0] == test_inputs.shape[0])
 
             # Note, we ignore a possible validation set here on purpose, as it
             # should not be part of the pickle (see below).
             train_inds = np.arange(train_labels.size)
-            test_inds = np.arange(train_labels.size, 
+            test_inds = np.arange(train_labels.size,
                                   train_labels.size + test_labels.size)
 
             labels = np.concatenate([train_labels, test_labels])
@@ -199,7 +200,7 @@ class MNISTData(Dataset):
         # After writing the pickle, correct train and validation set indices.
         if validation_size > 0:
             train_inds_orig = self._data['train_inds']
-            assert(validation_size < train_inds_orig.size)
+            assert (validation_size < train_inds_orig.size)
 
             val_inds = np.arange(validation_size)
             train_inds = np.arange(validation_size, train_inds_orig.size)
@@ -208,7 +209,7 @@ class MNISTData(Dataset):
             self._data['val_inds'] = val_inds
 
         end = time.time()
-        print('Elapsed time to read dataset: %f sec' % (end-start))
+        print('Elapsed time to read dataset: %f sec' % (end - start))
 
     @staticmethod
     def _read_labels(filename):
@@ -220,7 +221,7 @@ class MNISTData(Dataset):
         Returns:
             The labels as a 1D numpy array.
         """
-        assert(os.path.isfile(filename))
+        assert (os.path.isfile(filename))
 
         print('Reading labels from %s.' % filename)
         with gzip.open(filename, "rb") as f:
@@ -245,7 +246,7 @@ class MNISTData(Dataset):
         Returns:
             The images stacked in a 2D array, where each row is one image.
         """
-        assert(os.path.isfile(filename))
+        assert (os.path.isfile(filename))
 
         print('Reading images from %s.' % filename)
         with gzip.open(filename, 'rb') as f:
@@ -318,9 +319,9 @@ class MNISTData(Dataset):
         if outputs is None:
             ax.set_title("MNIST Sample")
         else:
-            assert(np.size(outputs) == 1)
+            assert (np.size(outputs) == 1)
             label = np.asscalar(outputs)
-            
+
             if predictions is None:
                 ax.set_title('MNIST sample with\nlabel: %d' % label)
             else:
@@ -328,11 +329,11 @@ class MNISTData(Dataset):
                     pred_label = np.argmax(predictions)
                 else:
                     pred_label = np.asscalar(predictions)
-                    
+
                 ax.set_title('MNIST sample with\nlabel: %d (prediction: %d)' %
                              (label, pred_label))
 
-        #plt.subplots_adjust(wspace=0.5, hspace=0.4)
+        # plt.subplots_adjust(wspace=0.5, hspace=0.4)
 
         ax.set_axis_off()
         ax.imshow(np.squeeze(np.reshape(inputs, self.in_shape)))
@@ -356,18 +357,17 @@ class MNISTData(Dataset):
         """
         plot_configs = super()._plot_config(inputs, outputs=outputs,
                                             predictions=predictions)
-        
+
         if predictions is not None and \
                 np.shape(predictions)[1] == self.num_classes:
             plot_configs['outer_hspace'] = 0.6
             plot_configs['inner_hspace'] = 0.4
             plot_configs['num_inner_rows'] = 2
-            #plot_configs['num_inner_cols'] = 1
+            # plot_configs['num_inner_cols'] = 1
             plot_configs['num_inner_plots'] = 2
 
         return plot_configs
 
+
 if __name__ == '__main__':
     pass
-
-

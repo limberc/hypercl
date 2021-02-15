@@ -25,19 +25,19 @@ In this training script, we explore different ways of multi-task learning
 at all times).
 """
 # Do not delete the following import for all executable scripts!
-import __init__ # pylint: disable=unused-import
 
-import torch
-import torch.optim as optim
-import torch.nn.functional as F
 import numpy as np
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
 
-from toy_example import train_utils
 import toy_example.train as train_cl
+from toy_example import train_utils
 from toy_example.task_recognition_model import RecognitionNet
 
+
 def train_with_embs(data_handlers, mnet, hnet, device, config, writer,
-                   mixed_gradient=True):
+                    mixed_gradient=True):
     """Train our hypernet - main-net combination on all tasks at once (multi-
     task learning).
 
@@ -101,7 +101,7 @@ def train_with_embs(data_handlers, mnet, hnet, device, config, writer,
         if i % config.val_iter == 0:
             for t in range(n):
                 train_cl.evaluate(t, data_handlers[t], mnet, hnet, device,
-                                     config, writer, i)
+                                  config, writer, i)
             train_cl.test(data_handlers, mnet, hnet, device, config, writer)
             mnet.train()
             hnet.train()
@@ -134,7 +134,7 @@ def train_with_embs(data_handlers, mnet, hnet, device, config, writer,
 
             if config.multi_head:
                 n_y = data.out_shape[0]
-                allowed_outputs = list(range(t*n_y, (t+1)*n_y))
+                allowed_outputs = list(range(t * n_y, (t + 1) * n_y))
                 Y = Y[:, allowed_outputs]
 
             # Task-specific loss.
@@ -147,6 +147,7 @@ def train_with_embs(data_handlers, mnet, hnet, device, config, writer,
             writer.add_scalar('train/mse_loss', loss, i)
 
     print('Training network ... Done')
+
 
 def train_main_only(data_handlers, mnet, device, config, writer):
     """Train main network on all tasks at once (multi-task learning). Note, no
@@ -171,7 +172,7 @@ def train_main_only(data_handlers, mnet, device, config, writer):
         if i % config.val_iter == 0:
             for t in range(n):
                 train_cl.evaluate(t, data_handlers[t], mnet, None, device,
-                                     config, writer, i)
+                                  config, writer, i)
             train_cl.test(data_handlers, mnet, None, device, config, writer)
             mnet.train()
 
@@ -180,7 +181,7 @@ def train_main_only(data_handlers, mnet, device, config, writer):
 
         # Choose number of samples for each task:
         _, n_samples = np.unique(np.random.randint(0, high=n,
-            size=config.batch_size), return_counts=True)
+                                                   size=config.batch_size), return_counts=True)
 
         ### Train main network.
         optimizer.zero_grad()
@@ -194,10 +195,10 @@ def train_main_only(data_handlers, mnet, device, config, writer):
             data = data_handlers[t]
 
             batch = data.next_train_batch(bs)
-            X[m:m+bs, :] = data.input_to_torch_tensor(batch[0], device,
-                                                      mode='train')
-            T[m:m+bs, :] = data.output_to_torch_tensor(batch[1], device,
-                                                       mode='train')
+            X[m:m + bs, :] = data.input_to_torch_tensor(batch[0], device,
+                                                        mode='train')
+            T[m:m + bs, :] = data.output_to_torch_tensor(batch[1], device,
+                                                         mode='train')
 
             m += bs
 
@@ -211,8 +212,8 @@ def train_main_only(data_handlers, mnet, device, config, writer):
 
             m = 0
             for t, bs in enumerate(n_samples):
-                allowed_outputs = list(range(t*n_y, (t+1)*n_y))
-                Y[m:m+bs, :] = Y_full[m:m+bs, allowed_outputs]
+                allowed_outputs = list(range(t * n_y, (t + 1) * n_y))
+                Y[m:m + bs, :] = Y_full[m:m + bs, allowed_outputs]
 
                 m += bs
 
@@ -226,6 +227,7 @@ def train_main_only(data_handlers, mnet, device, config, writer):
             writer.add_scalar('train/mse_loss', loss, i)
 
     print('Training network ... Done')
+
 
 def train_without_embs(data_handlers, mnet, hnet, device, config, writer):
     """Train our hypernet - main-net combination on all tasks at once (multi-
@@ -254,7 +256,7 @@ def train_without_embs(data_handlers, mnet, hnet, device, config, writer):
         if i % config.val_iter == 0:
             for t in range(n):
                 train_cl.evaluate(t, data_handlers[t], mnet, hnet, device,
-                                     config, writer, i)
+                                  config, writer, i)
             train_cl.test(data_handlers, mnet, hnet, device, config, writer)
             mnet.train()
             hnet.train()
@@ -264,11 +266,11 @@ def train_without_embs(data_handlers, mnet, hnet, device, config, writer):
 
         # Choose number of samples for each task:
         _, n_samples = np.unique(np.random.randint(0, high=n,
-            size=config.batch_size), return_counts=True)
+                                                   size=config.batch_size), return_counts=True)
 
         ### Train hypernet.
         optimizer.zero_grad()
-        
+
         X = torch.empty((config.batch_size, *data_handlers[0].in_shape))
         T = torch.empty((config.batch_size, *data_handlers[0].out_shape))
         m = 0
@@ -278,10 +280,10 @@ def train_without_embs(data_handlers, mnet, hnet, device, config, writer):
             data = data_handlers[t]
 
             batch = data.next_train_batch(bs)
-            X[m:m+bs, :] = data.input_to_torch_tensor(batch[0], device,
-                                                      mode='train')
-            T[m:m+bs, :] = data.output_to_torch_tensor(batch[1], device,
-                                                       mode='train')
+            X[m:m + bs, :] = data.input_to_torch_tensor(batch[0], device,
+                                                        mode='train')
+            T[m:m + bs, :] = data.output_to_torch_tensor(batch[1], device,
+                                                         mode='train')
 
             m += bs
 
@@ -296,8 +298,8 @@ def train_without_embs(data_handlers, mnet, hnet, device, config, writer):
 
             m = 0
             for t, bs in enumerate(n_samples):
-                allowed_outputs = list(range(t*n_y, (t+1)*n_y))
-                Y[m:m+bs, :] = Y_full[m:m+bs, allowed_outputs]
+                allowed_outputs = list(range(t * n_y, (t + 1) * n_y))
+                Y[m:m + bs, :] = Y_full[m:m + bs, allowed_outputs]
 
                 m += bs
 
@@ -317,6 +319,7 @@ def train_without_embs(data_handlers, mnet, hnet, device, config, writer):
 
     print('Training network ... Done')
 
+
 def train_rnet(data_handlers, mnet, hnet, rnet, device, config, writer):
     """Train the recognition network. However, for multitask learning, there is
     no need to prevent catastophic forgetting in the task recognition network,
@@ -330,7 +333,7 @@ def train_rnet(data_handlers, mnet, hnet, rnet, device, config, writer):
         rnet: The recognition network.
     """
     print('Training recognition network ...')
-    
+
     n = len(data_handlers)
 
     rnet.train()
@@ -344,7 +347,7 @@ def train_rnet(data_handlers, mnet, hnet, rnet, device, config, writer):
         if i % config.val_iter == 0:
             test_mse, _, _ = train_cl.test(data_handlers, mnet, hnet, device,
                                            config, writer, rnet=rnet)
-            print('Current MSE values using task recognition %s' % 
+            print('Current MSE values using task recognition %s' %
                   str(test_mse))
             rnet.train()
 
@@ -383,6 +386,7 @@ def train_rnet(data_handlers, mnet, hnet, rnet, device, config, writer):
 
     print('Training recognition network ... Done')
 
+
 def run():
     """Run the script
 
@@ -394,7 +398,7 @@ def run():
           recognition model to infer task identity during testing.
     """
     config = train_utils.parse_cmd_arguments(mode='train_mt_regression')
-    assert(config.method in range(3))
+    assert (config.method in range(3))
 
     device, writer = train_utils._setup_environment(config)
 
@@ -410,8 +414,9 @@ def run():
     # Note, if we use a recognition network, then we use a custom one, as we
     # don't need an autoencoder (no replay needed in multitask learning).
     mnet, hnet, rnet = train_utils._generate_networks(config, dhandlers, device,
-        create_hnet=config.method != 0, create_rnet=config.use_task_detection,
-        no_replay=True)
+                                                      create_hnet=config.method != 0,
+                                                      create_rnet=config.use_task_detection,
+                                                      no_replay=True)
 
     ### Train on tasks in parallel.
     current_rnet_mse = None
@@ -425,7 +430,7 @@ def run():
             train_rnet(dhandlers, mnet, hnet, rnet, device, config, writer)
 
             current_rnet_mse, _, _ = train_cl.test(dhandlers, mnet, hnet,
-                device, config, writer, rnet=rnet, save_fig=False)
+                                                   device, config, writer, rnet=rnet, save_fig=False)
             print('Final MSE values after training on all tasks using ' +
                   'task recognition %s' % str(current_rnet_mse))
 
@@ -434,7 +439,7 @@ def run():
 
     ### Test networks.
     current_mse, _, _ = train_cl.test(dhandlers, mnet, hnet, device, config,
-                                       writer)
+                                      writer)
 
     print('Final MSE values after training on all tasks: %s' % \
           np.array2string(current_mse, precision=5, separator=','))
@@ -447,6 +452,6 @@ def run():
 
     return current_mse, current_rnet_mse
 
+
 if __name__ == '__main__':
     _, _ = run()
-

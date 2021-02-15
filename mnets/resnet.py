@@ -37,6 +37,7 @@ from utils.batchnorm_layer import BatchNormLayer
 from utils.context_mod_layer import ContextModLayer
 from utils.torch_utils import init_params
 
+
 class ResNet(Classifier):
     """A resnet with :math:`6n+2` layers with :math:`3n` residual blocks,
     consisting of two layers each.
@@ -163,6 +164,7 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             number of gain and shift parameters for such a layer will increase
             to ``C x H x W``.
     """
+
     def __init__(self, in_shape=[32, 32, 3],
                  num_classes=10, verbose=True, n=5, no_weights=False,
                  init_weights=None, use_batch_norm=True,
@@ -177,11 +179,11 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         self._in_shape = in_shape
         self._n = n
 
-        assert(init_weights is None or \
-               (not no_weights or not context_mod_no_weights))
+        assert (init_weights is None or \
+                (not no_weights or not context_mod_no_weights))
         self._no_weights = no_weights
 
-        assert(not use_batch_norm or (not distill_bn_stats or bn_track_stats))
+        assert (not use_batch_norm or (not distill_bn_stats or bn_track_stats))
 
         self._use_batch_norm = use_batch_norm
         self._bn_track_stats = bn_track_stats
@@ -220,7 +222,7 @@ hyper_shapes_distilled` and the current statistics will be returned by the
 
         if use_context_mod:
             cm_ind = 0
-            cm_shapes = [] # Output shape of all layers.
+            cm_shapes = []  # Output shape of all layers.
             if context_mod_inputs:
                 cm_shapes.append([in_shape[2], *in_shape[:2]])
             layer_out_shapes = self._compute_layer_out_sizes()
@@ -237,8 +239,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
 
             for i, s in enumerate(cm_shapes):
                 cmod_layer = ContextModLayer(s,
-                    no_weights=context_mod_no_weights,
-                    apply_gain_offset=context_mod_gain_offset)
+                                             no_weights=context_mod_no_weights,
+                                             apply_gain_offset=context_mod_gain_offset)
                 self._context_mod_layers.append(cmod_layer)
 
                 self.param_shapes.extend(cmod_layer.param_shapes)
@@ -250,11 +252,11 @@ hyper_shapes_distilled` and the current statistics will be returned by the
 
                 # FIXME ugly code. Move initialization somewhere else.
                 if not context_mod_no_weights and init_weights is not None:
-                    assert(len(cmod_layer.weights) == 2)
+                    assert (len(cmod_layer.weights) == 2)
                     for ii in range(2):
-                        assert(np.all(np.equal( \
-                                list(init_weights[cm_ind].shape),
-                                list(cm_ind.weights[ii].shape))))
+                        assert (np.all(np.equal( \
+                            list(init_weights[cm_ind].shape),
+                            list(cm_ind.weights[ii].shape))))
                         cmod_layer.weights[ii].data = init_weights[cm_ind]
                         cm_ind += 1
 
@@ -271,10 +273,10 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         # check for us.
         fs = self._filter_sizes
         num_weights = np.prod(self._kernel_size) * \
-            (in_shape[2] * fs[0] + np.sum([fs[i] * fs[i+1] + \
-                (2*n-1) * fs[i+1]**2 for i in range(3)])) + \
-            (fs[0] + 2*n * np.sum([fs[i] for i in range(1, 4)])) + \
-            (fs[-1] * num_classes + num_classes)
+                      (in_shape[2] * fs[0] + np.sum([fs[i] * fs[i + 1] + \
+                                                     (2 * n - 1) * fs[i + 1] ** 2 for i in range(3)])) + \
+                      (fs[0] + 2 * n * np.sum([fs[i] for i in range(1, 4)])) + \
+                      (fs[-1] * num_classes + num_classes)
 
         cm_num_weights = MainNetInterface.shapes_to_num_weights( \
             self._context_mod_shapes) if use_context_mod else 0
@@ -284,13 +286,13 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             # The gamma and beta parameters of a batch norm layer are
             # learned as well.
             num_weights += 2 * (fs[0] + \
-                                2*n*np.sum([fs[i] for i in range(1, 4)]))
+                                2 * n * np.sum([fs[i] for i in range(1, 4)]))
 
         if verbose:
             print('A ResNet with %d layers and %d weights is created' \
-                  % (6*n+2, num_weights)
+                  % (6 * n + 2, num_weights)
                   + (' (including %d context-mod weights).' % cm_num_weights \
-                     if cm_num_weights > 0 else '.'))
+                         if cm_num_weights > 0 else '.'))
 
         ################################################
         ### Define and initialize batch norm weights ###
@@ -306,11 +308,11 @@ hyper_shapes_distilled` and the current statistics will be returned by the
                 if i == 0:
                     num = 1
                 else:
-                    num = 2*n
+                    num = 2 * n
 
                 for j in range(num):
                     bn_layer = BatchNormLayer(s, affine=not no_weights,
-                        track_running_stats=bn_track_stats)
+                                              track_running_stats=bn_track_stats)
                     self._batchnorm_layers.append(bn_layer)
 
                     if distill_bn_stats:
@@ -318,11 +320,11 @@ hyper_shapes_distilled` and the current statistics will be returned by the
                             [list(p.shape) for p in bn_layer.get_stats(0)])
 
                     if not no_weights and init_weights is not None:
-                        assert(len(bn_layer.weights) == 2)
+                        assert (len(bn_layer.weights) == 2)
                         for ii in range(2):
-                            assert(np.all(np.equal( \
-                                    list(init_weights[bn_ind].shape),
-                                    list(bn_layer.weights[ii].shape))))
+                            assert (np.all(np.equal( \
+                                list(init_weights[bn_ind].shape),
+                                list(bn_layer.weights[ii].shape))))
                             bn_layer.weights[ii].data = init_weights[bn_ind]
                             bn_ind += 1
 
@@ -332,8 +334,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         # Note, method `_compute_hyper_shapes` doesn't take context-mod into
         # consideration.
         self._param_shapes.extend(self._compute_hyper_shapes(no_weights=True))
-        assert(num_weights == \
-               MainNetInterface.shapes_to_num_weights(self._param_shapes))
+        assert (num_weights == \
+                MainNetInterface.shapes_to_num_weights(self._param_shapes))
 
         self._layer_weight_tensors = nn.ParameterList()
         self._layer_bias_vectors = nn.ParameterList()
@@ -359,17 +361,17 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         # First layer.
         self._layer_weight_tensors.append(nn.Parameter(
             torch.Tensor(self._filter_sizes[0], self._in_shape[2],
-                *self._kernel_size),
+                         *self._kernel_size),
             requires_grad=True))
         self._layer_bias_vectors.append(nn.Parameter(
             torch.Tensor(self._filter_sizes[0]), requires_grad=True))
 
         # Each block consists of 2n layers.
         for i in range(1, len(self._filter_sizes)):
-            in_filters = self._filter_sizes[i-1]
+            in_filters = self._filter_sizes[i - 1]
             out_filters = self._filter_sizes[i]
 
-            for _ in range(2*n):
+            for _ in range(2 * n):
                 self._layer_weight_tensors.append(nn.Parameter(
                     torch.Tensor(out_filters, in_filters, *self._kernel_size),
                     requires_grad=True))
@@ -396,15 +398,15 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         ### Initialize weights.
         if init_weights is not None:
             num_layers = 6 * n + 2
-            assert(len(init_weights) == 2 * num_layers)
+            assert (len(init_weights) == 2 * num_layers)
             offset = 0
             if use_batch_norm:
                 offset = 2 * (6 * n + 1)
-            assert(len(self._weights) == offset + 2 * num_layers)
+            assert (len(self._weights) == offset + 2 * num_layers)
             for i in range(len(init_weights)):
                 j = offset + i
-                assert(np.all(np.equal(list(init_weights[i].shape),
-                                       list(self._weights[j].shape))))
+                assert (np.all(np.equal(list(init_weights[i].shape),
+                                        list(self._weights[j].shape))))
                 self._weights[j].data = init_weights[i]
         else:
             for i in range(len(self._layer_weight_tensors)):
@@ -464,7 +466,7 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             y: The output of the network.
         """
         if ((not self._use_context_mod and self._no_weights) or \
-                (self._no_weights or self._context_mod_no_weights)) and \
+            (self._no_weights or self._context_mod_no_weights)) and \
                 weights is None:
             raise Exception('Network was generated without weights. ' +
                             'Hence, "weights" option may not be None.')
@@ -491,8 +493,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             cm_weights = None
 
             if isinstance(weights, dict):
-                assert('internal_weights' in weights.keys() or \
-                       'mod_weights' in weights.keys())
+                assert ('internal_weights' in weights.keys() or \
+                        'mod_weights' in weights.keys())
                 if 'internal_weights' in weights.keys():
                     int_weights = weights['internal_weights']
                 if 'mod_weights' in weights.keys():
@@ -502,7 +504,7 @@ hyper_shapes_distilled` and the current statistics will be returned by the
                         len(weights) == n_cm:
                     cm_weights = weights
                 else:
-                    assert(len(weights) == len(self.param_shapes))
+                    assert (len(weights) == len(self.param_shapes))
                     if self._use_context_mod:
                         cm_weights = weights[:n_cm]
                         int_weights = weights[n_cm:]
@@ -512,14 +514,14 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             if self._use_context_mod and cm_weights is None:
                 if self._context_mod_no_weights:
                     raise Exception('Network was generated without weights ' +
-                        'for context-mod layers. Hence, they must be passed ' +
-                        'via the "weights" option.')
+                                    'for context-mod layers. Hence, they must be passed ' +
+                                    'via the "weights" option.')
                 cm_weights = self.weights[:n_cm]
             if int_weights is None:
                 if self._no_weights:
                     raise Exception('Network was generated without internal ' +
-                        'weights. Hence, they must be passed via the ' +
-                        '"weights" option.')
+                                    'weights. Hence, they must be passed via the ' +
+                                    '"weights" option.')
                 if self._context_mod_no_weights:
                     int_weights = self.weights
                 else:
@@ -528,11 +530,11 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             # Note, context-mod weights might have different shapes, as they
             # may be parametrized on a per-sample basis.
             if self._use_context_mod:
-                assert(len(cm_weights) == len(self._context_mod_shapes))
+                assert (len(cm_weights) == len(self._context_mod_shapes))
             int_shapes = self.param_shapes[n_cm:]
-            assert(len(int_weights) == len(int_shapes))
+            assert (len(int_weights) == len(int_shapes))
             for i, s in enumerate(int_shapes):
-                assert(np.all(np.equal(s, list(int_weights[i].shape))))
+                assert (np.all(np.equal(s, list(int_weights[i].shape))))
 
         ########################
         ### Parse condition ###
@@ -543,8 +545,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
 
         if condition is not None:
             if isinstance(condition, dict):
-                assert('bn_stats_id' in condition.keys() or \
-                       'cmod_ckpt_id' in condition.keys())
+                assert ('bn_stats_id' in condition.keys() or \
+                        'cmod_ckpt_id' in condition.keys())
                 if 'bn_stats_id' in condition.keys():
                     bn_cond = condition['bn_stats_id']
                 if 'cmod_ckpt_id' in condition.keys():
@@ -574,14 +576,14 @@ hyper_shapes_distilled` and the current statistics will be returned by the
                                  'provided if the return value of ' +
                                  'method "distillation_targets()" is not None.')
             shapes = self.hyper_shapes_distilled
-            assert(len(distilled_params) == len(shapes))
+            assert (len(distilled_params) == len(shapes))
             for i, s in enumerate(shapes):
-                assert(np.all(np.equal(s, list(distilled_params[i].shape))))
+                assert (np.all(np.equal(s, list(distilled_params[i].shape))))
 
             # Extract batchnorm stats from distilled_params
             for i in range(0, len(distilled_params), 2):
-                running_means[i//2] = distilled_params[i]
-                running_vars[i//2] = distilled_params[i+1]
+                running_means[i // 2] = distilled_params[i]
+                running_vars[i // 2] = distilled_params[i + 1]
 
         elif self._use_batch_norm and self._bn_track_stats and \
                 bn_cond is None:
@@ -591,7 +593,7 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         ###############################################
         ### Extract weight tensors and bias vectors ###
         ###############################################
-        assert(self.has_bias)
+        assert (self.has_bias)
         w_weights = []
         b_weights = []
         for i, p in enumerate(layer_weights):
@@ -632,24 +634,24 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             nonlocal layer_ind, cm_ind, bn_ind
 
             h = F.conv2d(h, w_weights[layer_ind], bias=b_weights[layer_ind],
-                             stride=stride, padding=1)
+                         stride=stride, padding=1)
             layer_ind += 1
 
             # Context-dependent modulation (pre-activation).
             if self._use_context_mod and \
                     not self._context_mod_post_activation:
                 h = self._context_mod_layers[cm_ind].forward(h,
-                    weights=cm_weights[2*cm_ind:2*cm_ind+2],
-                    ckpt_id=cmod_cond)
+                                                             weights=cm_weights[2 * cm_ind:2 * cm_ind + 2],
+                                                             ckpt_id=cmod_cond)
                 cm_ind += 1
 
             # Batch-norm
             if self._use_batch_norm:
                 h = self._batchnorm_layers[bn_ind].forward(h,
-                    running_mean=running_means[bn_ind],
-                    running_var=running_vars[bn_ind],
-                    weight=bn_weights[2*bn_ind],
-                    bias=bn_weights[2*bn_ind+1], stats_id=bn_cond)
+                                                           running_mean=running_means[bn_ind],
+                                                           running_var=running_vars[bn_ind],
+                                                           weight=bn_weights[2 * bn_ind],
+                                                           bias=bn_weights[2 * bn_ind + 1], stats_id=bn_cond)
                 bn_ind += 1
 
             # Note, as can be seen in figure 5 of the original paper, the
@@ -663,8 +665,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             # Context-dependent modulation (post-activation).
             if self._use_context_mod and self._context_mod_post_activation:
                 h = self._context_mod_layers[cm_ind].forward(h,
-                    weights=cm_weights[2*cm_ind:2*cm_ind+2],
-                    ckpt_id=cmod_cond)
+                                                             weights=cm_weights[2 * cm_ind:2 * cm_ind + 2],
+                                                             ckpt_id=cmod_cond)
                 cm_ind += 1
 
             return h
@@ -676,7 +678,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         # Context-dependent modulation of inputs directly.
         if self._use_context_mod and self._context_mod_inputs:
             h = self._context_mod_layers[cm_ind].forward(h,
-                weights=cm_weights[2*cm_ind:2*cm_ind+2], ckpt_id=cmod_cond)
+                                                         weights=cm_weights[2 * cm_ind:2 * cm_ind + 2],
+                                                         ckpt_id=cmod_cond)
             cm_ind += 1
 
         ### Initial convolutional layer.
@@ -701,9 +704,9 @@ hyper_shapes_distilled` and the current statistics will be returned by the
                     # additionally have to subsample the input.
                     # This implementation is motivated by
                     #    https://git.io/fhcfk
-                    fs = self._filter_sizes[i+1]
+                    fs = self._filter_sizes[i + 1]
                     shortcut_h = F.pad(h[:, :, ::2, ::2],
-                        (0, 0, 0, 0, fs//4, fs//4), "constant", 0)
+                                       (0, 0, 0, 0, fs // 4, fs // 4), "constant", 0)
 
                 h = conv_layer(h, stride, shortcut=None)
 
@@ -721,7 +724,8 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         # Context-dependent modulation in output layer.
         if self._use_context_mod and not self._no_last_layer_context_mod:
             h = self._context_mod_layers[cm_ind].forward(h,
-                weights=cm_weights[2*cm_ind:2*cm_ind+2], ckpt_id=cmod_cond)
+                                                         weights=cm_weights[2 * cm_ind:2 * cm_ind + 2],
+                                                         ckpt_id=cmod_cond)
 
         return h
 
@@ -769,9 +773,9 @@ hyper_shapes_distilled` and the current statistics will be returned by the
                 if i == 0:
                     num = 1
                 else:
-                    num = 2*n
+                    num = 2 * n
 
-                for _ in range(2*num):
+                for _ in range(2 * num):
                     ret.append([s])
 
         f_in = self._in_shape[-1]
@@ -780,7 +784,7 @@ hyper_shapes_distilled` and the current statistics will be returned by the
             if i == 0:
                 num = 1
             else:
-                num = 2*n
+                num = 2 * n
 
             for _ in range(num):
                 ret.append([f_out, f_in, *ks])
@@ -834,13 +838,13 @@ hyper_shapes_distilled` and the current statistics will be returned by the
         in_shape = self._in_shape
         fs = self._filter_sizes
         ks = self._kernel_size
-        pd = 1 # all paddings are 1.
-        assert(len(ks) == 2)
-        assert(len(fs) == 4)
+        pd = 1  # all paddings are 1.
+        assert (len(ks) == 2)
+        assert (len(fs) == 4)
         n = self._n
 
         # Note, `in_shape` is in Tensorflow layout.
-        assert(len(in_shape) == 3)
+        assert (len(in_shape) == 3)
         in_shape = [in_shape[2], *in_shape[:2]]
 
         ret = []
@@ -852,34 +856,35 @@ hyper_shapes_distilled` and the current statistics will be returned by the
 
         # First conv layer (stride 1).
         C = fs[0]
-        H = (H - ks[0] + 2*pd) // 1 + 1
-        W = (W - ks[1] + 2*pd) // 1 + 1
+        H = (H - ks[0] + 2 * pd) // 1 + 1
+        W = (W - ks[1] + 2 * pd) // 1 + 1
         ret.append([C, H, W])
 
         # First block (no strides).
         C = fs[1]
-        H = (H - ks[0] + 2*pd) // 1 + 1
-        W = (W - ks[1] + 2*pd) // 1 + 1
-        ret.extend([[C, H, W]] * (2*n))
+        H = (H - ks[0] + 2 * pd) // 1 + 1
+        W = (W - ks[1] + 2 * pd) // 1 + 1
+        ret.extend([[C, H, W]] * (2 * n))
 
         # Second block (first layer has stride 2).
         C = fs[2]
-        H = (H - ks[0] + 2*pd) // 2 + 1
-        W = (W - ks[1] + 2*pd) // 2 + 1
-        ret.extend([[C, H, W]] * (2*n))
+        H = (H - ks[0] + 2 * pd) // 2 + 1
+        W = (W - ks[1] + 2 * pd) // 2 + 1
+        ret.extend([[C, H, W]] * (2 * n))
 
         # Third block (first layer has stride 2).
         C = fs[3]
-        H = (H - ks[0] + 2*pd) // 2 + 1
-        W = (W - ks[1] + 2*pd) // 2 + 1
-        ret.extend([[C, H, W]] * (2*n))
+        H = (H - ks[0] + 2 * pd) // 2 + 1
+        W = (W - ks[1] + 2 * pd) // 2 + 1
+        ret.extend([[C, H, W]] * (2 * n))
 
         # Final fully-connected layer (after avg pooling), i.e., output size.
         ret.append([self._num_classes])
 
-        assert(len(ret) == 6*n + 2)
+        assert (len(ret) == 6 * n + 2)
 
         return ret
+
 
 if __name__ == '__main__':
     pass

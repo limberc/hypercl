@@ -53,10 +53,12 @@ boxes, segmentation, parts annotation, ...) that we don't make use of yet.
     The original category labels range from 1-200. We modify them to range
     from 0 - 199.
 """
+import warnings
+
 # FIXME We currently rely too much on the internals of class ImageFolder.
 import torchvision
-import warnings
 from packaging import version
+
 if version.parse(torchvision.__version__) < version.parse('0.2.2'):
     # FIXME Probably not necessary to enforce, just ignore non-existing
     # "targets" field.
@@ -78,6 +80,7 @@ import matplotlib.pyplot as plt
 
 from data.large_img_dataset import LargeImgDataset
 from data.ilsvrc2012_data import ILSVRC2012Data
+
 
 class CUB2002011(LargeImgDataset):
     """An instance of the class shall represent the CUB-200-2011 dataset.
@@ -115,17 +118,17 @@ class CUB2002011(LargeImgDataset):
     _DOWNLOAD_PATH = 'http://www.vision.caltech.edu/visipedia-data/' + \
                      'CUB-200-2011/'
     _IMG_ANNO_FILE = 'CUB_200_2011.tgz'
-    _SEGMENTATION_FILE = 'segmentations.tgz' # UNUSED
+    _SEGMENTATION_FILE = 'segmentations.tgz'  # UNUSED
     # In which subfolder of the datapath should the data be stored.
     _SUBFOLDER = 'cub_200_2011'
     # After extracting the downloaded archive, the data will be in
     # this subfolder.
     _REL_BASE = 'CUB_200_2011'
-    _IMG_DIR = 'images' # Realitve to _REL_BASE
-    _CLASSES_FILE = 'classes.txt' # Realitve to _REL_BASE
-    _IMG_CLASS_LBLS_FILE = 'image_class_labels.txt' # Realitve to _REL_BASE
-    _IMG_FILE = 'images.txt' # Realitve to _REL_BASE
-    _TRAIN_TEST_SPLIT_FILE = 'train_test_split.txt' # Realitve to _REL_BASE
+    _IMG_DIR = 'images'  # Realitve to _REL_BASE
+    _CLASSES_FILE = 'classes.txt'  # Realitve to _REL_BASE
+    _IMG_CLASS_LBLS_FILE = 'image_class_labels.txt'  # Realitve to _REL_BASE
+    _IMG_FILE = 'images.txt'  # Realitve to _REL_BASE
+    _TRAIN_TEST_SPLIT_FILE = 'train_test_split.txt'  # Realitve to _REL_BASE
 
     def __init__(self, data_path, use_one_hot=False, num_val_per_class=0):
         # We keep the full path to each image in memory, so we don't need to
@@ -143,7 +146,7 @@ class CUB2002011(LargeImgDataset):
         if not os.path.exists(data_path):
             print('Creating directory "%s" ...' % (data_path))
             os.makedirs(data_path)
-            
+
         full_data_path = os.path.join(data_path, CUB2002011._REL_BASE)
         image_dir = os.path.join(full_data_path, CUB2002011._IMG_DIR)
         classes_fn = os.path.join(full_data_path, CUB2002011._CLASSES_FILE)
@@ -208,7 +211,7 @@ class CUB2002011(LargeImgDataset):
         lbl2lbl_name_tmp = dict(zip(list(img_lbl_name_csv['label']),
                                     list(img_lbl_name_csv['label_name'])))
         # Here, we also have to modify the labels to be within 0-199.
-        lbl2lbl_name = {k-1: v for k, v in lbl2lbl_name_tmp.items()}
+        lbl2lbl_name = {k - 1: v for k, v in lbl2lbl_name_tmp.items()}
 
         # Train-test-split.
         train_test_csv = pandas.read_csv(train_test_split_fn, sep=' ',
@@ -223,8 +226,8 @@ class CUB2002011(LargeImgDataset):
         ####################
         for i, (img_path, lbl) in enumerate(ds_train.samples):
             iid = img2id[img_path]
-            assert(id2img[iid] == img_path)
-            assert(lbl == id2lbl[iid])
+            assert (id2img[iid] == img_path)
+            assert (lbl == id2lbl[iid])
 
         ################################
         ### Train / val / test split ###
@@ -236,7 +239,7 @@ class CUB2002011(LargeImgDataset):
 
         ds_test = deepcopy(ds_train)
         ds_test.transform = test_transform
-        assert(ds_test.target_transform is None)
+        assert (ds_test.target_transform is None)
         if num_val_per_class > 0:
             ds_val = deepcopy(ds_train)
             # NOTE we use test input transforms for the validation set.
@@ -245,25 +248,25 @@ class CUB2002011(LargeImgDataset):
             ds_val = None
 
         num_classes = len(lbl2lbl_name_tmp.keys())
-        assert(num_classes == 200)
+        assert (num_classes == 200)
         val_counts = np.zeros(num_classes, dtype=np.int)
 
         for img_path, img_lbl in orig_samples:
             iid = img2id[img_path]
-            if id2train[iid] == 1: # In train split.
-                if val_counts[img_lbl] >= num_val_per_class: # train sample
+            if id2train[iid] == 1:  # In train split.
+                if val_counts[img_lbl] >= num_val_per_class:  # train sample
                     ds_train.samples.append((img_path, img_lbl))
-                else: # validation sample
+                else:  # validation sample
                     val_counts[img_lbl] += 1
                     ds_val.samples.append((img_path, img_lbl))
-            else: # In test split.
+            else:  # In test split.
                 ds_test.samples.append((img_path, img_lbl))
 
         for ds_obj in [ds_train, ds_test] + \
-                ([ds_val] if num_val_per_class > 0 else []):
+                      ([ds_val] if num_val_per_class > 0 else []):
             ds_obj.targets = [s[1] for s in ds_obj.samples]
-            assert(len(ds_obj.samples) == len(ds_obj.imgs) and \
-                   len(ds_obj.samples) == len(ds_obj.targets))
+            assert (len(ds_obj.samples) == len(ds_obj.imgs) and \
+                    len(ds_obj.samples) == len(ds_obj.targets))
 
         self._torch_ds_train = ds_train
         self._torch_ds_test = ds_test
@@ -278,7 +281,7 @@ class CUB2002011(LargeImgDataset):
             len(self._torch_ds_val)
         num_samples = num_train + num_test + num_val
 
-        max_path_len = len(max(orig_samples, key=lambda t : len(t[0]))[0])
+        max_path_len = len(max(orig_samples, key=lambda t: len(t[0]))[0])
 
         self._data['classification'] = True
         self._data['sequence'] = False
@@ -289,10 +292,10 @@ class CUB2002011(LargeImgDataset):
         self._data['out_shape'] = [200 if use_one_hot else 1]
 
         self._data['in_data'] = np.chararray([num_samples, 1],
-            itemsize=max_path_len, unicode=True)
+                                             itemsize=max_path_len, unicode=True)
         for i, (img_path, _) in enumerate(ds_train.samples +
-                ([] if num_val == 0 else ds_val.samples) +
-                ds_test.samples):
+                                          ([] if num_val == 0 else ds_val.samples) +
+                                          ds_test.samples):
             self._data['in_data'][i, :] = img_path
 
         labels = np.array(ds_train.targets +
@@ -313,7 +316,7 @@ class CUB2002011(LargeImgDataset):
               % (num_train, num_val, num_test) + 'samples.')
 
         end = time.time()
-        print('Elapsed time to read dataset: %f sec' % (end-start))
+        print('Elapsed time to read dataset: %f sec' % (end - start))
 
     def get_identifier(self):
         """Returns the name of the dataset."""
@@ -335,7 +338,7 @@ class CUB2002011(LargeImgDataset):
         if outputs is None:
             ax.set_title("CUB-200-2011 Sample")
         else:
-            assert(np.size(outputs) == 1)
+            assert (np.size(outputs) == 1)
             label = np.asscalar(outputs)
             label_name = self._label_to_name[label]
 
@@ -362,7 +365,6 @@ class CUB2002011(LargeImgDataset):
         ax.imshow(np.squeeze(np.reshape(img, self.in_shape)))
         fig.add_subplot(ax)
 
+
 if __name__ == '__main__':
     pass
-
-

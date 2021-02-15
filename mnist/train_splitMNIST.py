@@ -33,9 +33,9 @@ for an overview how to use this script.
 """
 
 # Do not delete the following import for all executable scripts!
-import __init__ # pylint: disable=unused-import
 
 import matplotlib
+
 matplotlib.use('Agg')
 
 import torch
@@ -52,7 +52,7 @@ from mnist.replay.train_replay import sample as sample_vae
 
 from mnist.train_args_default import _set_default
 from mnist import train_utils
-from mnist import train_args 
+from mnist import train_args
 
 from mnist.plotting import _plotImages
 import mnist.hp_search_splitMNIST as hpsearch
@@ -62,6 +62,7 @@ from mnets.classifier_interface import Classifier
 from utils import misc
 import utils.optim_step as opstep
 import utils.hnet_regularizer as hreg
+
 
 def _save_performance_summary(config, train_iter=None):
     """Save a summary of the test results achieved so far in a easy to parse
@@ -80,44 +81,45 @@ def _save_performance_summary(config, train_iter=None):
 
     if config.upper_bound or (config.infer_task_id and config.cl_scenario == 1):
         config.num_weights_rp_net = 0
-        config.num_weights_rp_hyper_net = 0 
+        config.num_weights_rp_hyper_net = 0
         config.compression_ratio_rp = 0
 
     tp["acc_after_list"] = misc.list_to_str(config.overall_acc_list)
     tp["acc_during_list"] = misc.list_to_str(config.during_accs_final)
-    tp["acc_after_mean"] = config.acc_mean 
-    tp["acc_during_mean"] = sum(config.during_accs_final)/config.num_tasks
-    tp["num_weights_class_net"] = config.num_weights_class_net 
-    tp["num_weights_rp_net"] = config.num_weights_rp_net 
-    tp["num_weights_rp_hyper_net"] = config.num_weights_rp_hyper_net 
-    tp["num_weights_class_hyper_net"] = config.num_weights_class_hyper_net 
+    tp["acc_after_mean"] = config.acc_mean
+    tp["acc_during_mean"] = sum(config.during_accs_final) / config.num_tasks
+    tp["num_weights_class_net"] = config.num_weights_class_net
+    tp["num_weights_rp_net"] = config.num_weights_rp_net
+    tp["num_weights_rp_hyper_net"] = config.num_weights_rp_hyper_net
+    tp["num_weights_class_hyper_net"] = config.num_weights_class_hyper_net
     tp["compression_ratio_rp"] = config.compression_ratio_rp
     tp["compression_ratio_class"] = config.compression_ratio_class
     tp["overall_task_infer_accuracy_list"] = \
-                       misc.list_to_str(config.overall_task_infer_accuracy_list)
-                           
-    tp["acc_task_infer_mean"] = config.acc_task_infer_mean 
+        misc.list_to_str(config.overall_task_infer_accuracy_list)
+
+    tp["acc_task_infer_mean"] = config.acc_task_infer_mean
     # Note, the keywords of this dictionary are defined by the array:
     #   hpsearch._SUMMARY_KEYWORDS
     with open(os.path.join(config.out_dir,
                            hpsearch._SUMMARY_FILENAME), 'w') as f:
 
-        assert('num_train_iter' in hpsearch._SUMMARY_KEYWORDS)
+        assert ('num_train_iter' in hpsearch._SUMMARY_KEYWORDS)
 
         for kw in hpsearch._SUMMARY_KEYWORDS:
             if kw == 'num_train_iter':
                 f.write('%s %d\n' % ('num_train_iter', train_iter))
-                continue   
+                continue
             if kw == 'finished':
-                continue            
+                continue
             else:
                 try:
                     f.write('%s %f\n' % (kw, tp[kw]))
                 except:
                     f.write('%s %s\n' % (kw, tp[kw]))
 
+
 def test(dhandlers, class_nets, infer_net, device, config, writer,
-                                                                task_id=None):
+         task_id=None):
     """ Test continual learning experiments on MNIST dataset. This can either 
     be splitMNIST or permutedMNIST. 
     Depending on the method and cl scenario used, this methods manages
@@ -152,15 +154,15 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
         infer_net.eval()
 
     with torch.no_grad():
-         
-        overall_acc = 0 
+
+        overall_acc = 0
         overall_acc_list = []
         overall_task_infer_accuracy = 0
         overall_task_infer_accuracy_list = []
-        
+
         # choose tasks to test
         if task_id is not None:
-            task_range = range(task_id, task_id+1)
+            task_range = range(task_id, task_id + 1)
         else:
             task_range = range(config.num_tasks)
 
@@ -176,12 +178,12 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
             # create some variables
             N_processed = 0
             test_size = dhandler.num_test_samples
-            
+
             # is task id has to be inferred, for every x we have to do that
             # and therefore have one h(e) = W per data point - this is only 
             # possible with batch size one, for now
             if (config.infer_task_id and infer_net is not None) or \
-                                                      config.infer_with_entropy:
+                    config.infer_with_entropy:
                 curr_bs = 1
             else:
                 curr_bs = config.test_batch_size
@@ -200,14 +202,14 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
 
                 # get data
                 real_batch = dhandler.next_test_batch(curr_bs)
-                X_real=dhandler.input_to_torch_tensor(real_batch[0], device, 
-                    mode='inference')
-                T_real=dhandler.output_to_torch_tensor(real_batch[1],device, 
-                    mode='inference')
+                X_real = dhandler.input_to_torch_tensor(real_batch[0], device,
+                                                        mode='inference')
+                T_real = dhandler.output_to_torch_tensor(real_batch[1], device,
+                                                         mode='inference')
 
                 # get short version of output dim
                 od = config.out_dim
-            
+
                 #######################################
                 # SET THE OUTPUT HEAD / COMPUTE TARGETS
                 #######################################
@@ -229,31 +231,31 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
                 if config.class_incremental:
                     task_out = [0, config.num_tasks]
                     T_real = torch.zeros((Y_dummies.shape[0],
-                        config.num_tasks)).to(device)
+                                          config.num_tasks)).to(device)
                     T_real[:, t] = 1
 
                 # compute targets - this is a bit unelegant, cl 3 requires hacks
                 elif config.cl_scenario == 1 or config.cl_scenario == 2:
                     if config.cl_scenario == 1:
                         # take the task specific output neuron
-                        task_out = [t*od, t*od + od]
+                        task_out = [t * od, t * od + od]
                     else:
                         # always all output neurons (only one head is used)
                         task_out = [0, od]
                 else:
                     # This here is the classic CL 3 scenario
                     # first we get the predictions, this is over all neurons
-                    task_out = [0, config.num_tasks*od]
+                    task_out = [0, config.num_tasks * od]
                     # Here we build the targets, this is zero everywhere 
                     # except for the current task - here the correct target
                     # is inserted
 
                     # build the two zero tensors that surround the targets
-                    zeros1 = torch.zeros(Y_dummies[:,0:t*od].shape).\
-                                                                to(device)
-                    zeros2 = torch.zeros(Y_dummies[:,0:(config.num_tasks\
-                                                - 1 - t)*od].shape).to(device)
-                    T_real = torch.cat([zeros1, T_real, zeros2], dim = -1)
+                    zeros1 = torch.zeros(Y_dummies[:, 0:t * od].shape). \
+                        to(device)
+                    zeros2 = torch.zeros(Y_dummies[:, 0:(config.num_tasks \
+                                                         - 1 - t) * od].shape).to(device)
+                    T_real = torch.cat([zeros1, T_real, zeros2], dim=-1)
 
                 #################
                 # TASK PREDICTION
@@ -272,7 +274,7 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
                         task_infer_accuracy += (inf_task_id == t).float()
 
                     elif config.infer_with_entropy and class_nets is not None \
-                        and config.training_with_hnet:
+                            and config.training_with_hnet:
                         entropies = []
                         if task_id is not None:
                             entrop_to_test = range(0, task_id + 1)
@@ -286,16 +288,16 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
                             if config.cl_scenario == 2:
                                 task_out = [0, od]
                             else:
-                                task_out = [e*od, e*od+od]
-                            Y_hat = F.softmax(Y_hat_logits[:, 
-                                task_out[0]:task_out[1]]/config.soft_temp, -1)
-                            entropy = -1*torch.sum(Y_hat * torch.log(Y_hat))
+                                task_out = [e * od, e * od + od]
+                            Y_hat = F.softmax(Y_hat_logits[:,
+                                              task_out[0]:task_out[1]] / config.soft_temp, -1)
+                            entropy = -1 * torch.sum(Y_hat * torch.log(Y_hat))
                             entropies.append(entropy)
                         inf_task_id = torch.argmin(torch.stack(entropies))
                         task_infer_accuracy += (inf_task_id == t).float()
-                    
+
                     if config.cl_scenario == 3 and config.infer_output_head:
-                        task_out = [inf_task_id*od, inf_task_id*od+od]
+                        task_out = [inf_task_id * od, inf_task_id * od + od]
                 else:
                     # if task id is known, task inference acc is 100%
                     task_infer_accuracy += 1
@@ -329,9 +331,9 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
                         # dimensions. Now we have to add 3*2 to the argmax 
                         # of Y_hat to get a prediction between class 0 and 
                         # num_tasks*class_per_task.
-                        
+
                         Y_hat = Y_hat.argmax(dim=1, keepdim=False) + \
-                                                                inf_task_id*od                                             
+                                inf_task_id * od
                     Y_hat_all.append(Y_hat)
                     T_all.append(T_real)
 
@@ -340,47 +342,48 @@ def test(dhandlers, class_nets, infer_net, device, config, writer,
                 Y_hat_all = torch.cat(Y_hat_all)
                 T_all = torch.cat(T_all)
                 # check if all test samples are used
-                assert(Y_hat_all.shape[0] == dhandler.num_test_samples)
+                assert (Y_hat_all.shape[0] == dhandler.num_test_samples)
 
                 # compute class acc's
                 if config.cl_scenario == 3 and class_nets is not None and \
-                                                       config.infer_output_head:
+                        config.infer_output_head:
                     # this is a special case, we compare the
                     targets = T_all.argmax(dim=1, keepdim=False)
                     classifier_accuracy = (Y_hat_all == targets).float().mean()
                 else:
                     classifier_accuracy = Classifier.accuracy(Y_hat_all, T_all)
-                
+
                 classifier_accuracy *= 100.
-                print("Accuracy of task: ", t, " % "  ,  classifier_accuracy)
+                print("Accuracy of task: ", t, " % ", classifier_accuracy)
                 overall_acc_list.append(classifier_accuracy)
                 overall_acc += classifier_accuracy
 
             # compute task inference acc"s
-            ti_accuracy=task_infer_accuracy/dhandler.num_test_samples*100.
+            ti_accuracy = task_infer_accuracy / dhandler.num_test_samples * 100.
             if config.training_task_infer or config.infer_with_entropy:
-                print("Accuracy of task inference: ", t, " % "  ,  ti_accuracy)
+                print("Accuracy of task inference: ", t, " % ", ti_accuracy)
             overall_task_infer_accuracy += ti_accuracy
             overall_task_infer_accuracy_list.append(ti_accuracy)
-        
+
         # testing all tasks
         if task_id is None:
             if class_nets is not None:
-                print("Overall mean acc: ", overall_acc/config.num_tasks)
+                print("Overall mean acc: ", overall_acc / config.num_tasks)
             if config.training_task_infer or config.infer_with_entropy:
-                print("Overall task inf acc: ", overall_task_infer_accuracy/ \
-                                                               config.num_tasks)
+                print("Overall task inf acc: ", overall_task_infer_accuracy / \
+                      config.num_tasks)
             config.overall_acc_list = overall_acc_list
-            config.acc_mean = overall_acc/config.num_tasks
+            config.acc_mean = overall_acc / config.num_tasks
             config.overall_task_infer_accuracy_list = \
-                                                overall_task_infer_accuracy_list
+                overall_task_infer_accuracy_list
             config.acc_task_infer_mean = \
-                                    overall_task_infer_accuracy/config.num_tasks
+                overall_task_infer_accuracy / config.num_tasks
             print(config.overall_task_infer_accuracy_list, config.acc_task_infer_mean)
     return classifier_accuracy
 
-def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer, 
-                                                                t, i, net_copy):
+
+def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
+                       t, i, net_copy):
     """ Sample fake data from generator for tasks up to t and compute a loss
     compared to predictions of a checkpointed network.
     
@@ -411,18 +414,18 @@ def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
     # we have to choose from which embeddings (multiple?!) to sample from 
     if config.class_incremental or config.single_class_replay:
         # if we trained every class with a different generator
-        emb_num = t*config.out_dim
+        emb_num = t * config.out_dim
     else:
         # here samples from the whole task come from one generator
         emb_num = t
     # we have to choose from which embeddings to sample from 
-    
+
     if config.fake_data_full_range:
         ran = range(0, emb_num)
-        bs_per_task = int(np.ceil(config.batch_size/emb_num))
+        bs_per_task = int(np.ceil(config.batch_size / emb_num))
     else:
         random_t = np.random.randint(0, emb_num)
-        ran = range(random_t, random_t+1)
+        ran = range(random_t, random_t + 1)
         bs_per_task = config.batch_size
 
     for re in ran:
@@ -430,24 +433,24 @@ def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
         # exchange replay data with real data to compute upper bounds 
         if config.upper_bound:
             real_batch = dhandlers_rp[re].next_train_batch(bs_per_task)
-            X_fake = dhandlers_rp[re].input_to_torch_tensor(real_batch[0], 
-                                                           device, mode='train')
+            X_fake = dhandlers_rp[re].input_to_torch_tensor(real_batch[0],
+                                                            device, mode='train')
         else:
-             # get fake data
+            # get fake data
             if config.replay_method == 'gan':
-                X_fake = sample_gan(dec, d_hnet, config, re, device, 
-                                                               bs = bs_per_task)
+                X_fake = sample_gan(dec, d_hnet, config, re, device,
+                                    bs=bs_per_task)
             else:
-                X_fake = sample_vae(dec, d_hnet, config, re, device, 
-                                                               bs = bs_per_task)
+                X_fake = sample_vae(dec, d_hnet, config, re, device,
+                                    bs=bs_per_task)
 
         # save some fake data to the writer
         if i % 100 == 0:
             if X_fake.shape[0] >= 15:
-                fig_fake = _plotImages(X_fake, config, bs_per_task)    
-                writer.add_figure('train_class_' + str(re) + '_fake', 
-                                                fig_fake, global_step=i)
-                                            
+                fig_fake = _plotImages(X_fake, config, bs_per_task)
+                writer.add_figure('train_class_' + str(re) + '_fake',
+                                  fig_fake, global_step=i)
+
         # compute soft targets with copied network
         target_logits = net_copy.forward(X_fake).detach()
         Y_hat_ls = net.forward(X_fake.detach())
@@ -465,15 +468,15 @@ def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
             # replay data. A soft target (on an untrained output) would not 
             # make sense.
 
-                # output head over all output neurons already available
-            task_out = [0, (t+1)*od]
+            # output head over all output neurons already available
+            task_out = [0, (t + 1) * od]
             # create target with zero everywhere except from the current re
-            zeros = torch.zeros(target_logits[:,0:(t+1)*od].shape).to(device)
-            
+            zeros = torch.zeros(target_logits[:, 0:(t + 1) * od].shape).to(device)
+
             if config.hard_targets or (t == 1 and re == 0):
                 zeros[:, re] = 1
             else:
-                zeros[:,0:t*od] = target_logits[:,0:t*od]
+                zeros[:, 0:t * od] = target_logits[:, 0:t * od]
 
             targets = zeros
             Y_hat_ls = Y_hat_ls[:, task_out[0]:task_out[1]]
@@ -481,7 +484,7 @@ def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
         elif config.cl_scenario == 1 or config.cl_scenario == 2:
             if config.cl_scenario == 1:
                 # take the task specific output neuron
-                task_out = [re*od, re*od + od]
+                task_out = [re * od, re * od + od]
             else:
                 # always all output neurons, only one head is used
                 task_out = [0, od]
@@ -492,21 +495,21 @@ def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
             if config.hard_targets:
                 soft_targets = torch.sigmoid(target_logits)
                 zeros = torch.zeros(Y_hat_ls.shape).to(device)
-                _, argmax = torch.max(soft_targets, 1)            
+                _, argmax = torch.max(soft_targets, 1)
                 targets = zeros.scatter_(1, argmax.view(-1, 1), 1)
             else:
                 # loss expects logits
                 targets = target_logits
         else:
             # take all neurons used up until now
-           
+
             # output head over all output neurons already available
-            task_out = [0, (t+1)*od]
+            task_out = [0, (t + 1) * od]
             # create target with zero everywhere except from the current re
-            zeros = torch.zeros(target_logits[:,0:(t+1)*od].shape).to(device)
+            zeros = torch.zeros(target_logits[:, 0:(t + 1) * od].shape).to(device)
 
             # sigmoid over the output head(s) from all previous task
-            soft_targets = torch.sigmoid(target_logits[:,0:t*od])
+            soft_targets = torch.sigmoid(target_logits[:, 0:t * od])
 
             # compute one hots
             if config.hard_targets:
@@ -514,33 +517,34 @@ def get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device, config, writer,
                 zeros.scatter_(1, argmax.view(-1, 1), 1)
             else:
                 # loss expects logits
-                zeros[:,0:t*od] = target_logits[:,0:t*od]
+                zeros[:, 0:t * od] = target_logits[:, 0:t * od]
             targets = zeros
             # choose the correct output size for the actual 
             Y_hat_ls = Y_hat_ls[:, task_out[0]:task_out[1]]
-        
+
         # add to list
         all_targets.append(targets)
         all_Y_hat_ls.append(Y_hat_ls)
-    
+
     # cat to one tensor
     all_targets = torch.cat(all_targets)
     Y_hat_ls = torch.cat(all_Y_hat_ls)
 
-    if i % 200 == 0:   
-        classifier_accuracy = Classifier.accuracy(Y_hat_ls, all_targets)*100.0
+    if i % 200 == 0:
+        classifier_accuracy = Classifier.accuracy(Y_hat_ls, all_targets) * 100.0
         msg = 'Training step {}: Classifier Accuracy: {:.3f} ' + \
-            '(on current FAKE DATA training batch).'
+              '(on current FAKE DATA training batch).'
         print(msg.format(i, classifier_accuracy))
-    
+
     # dependent on the target softness, the loss function is chosen
     if config.hard_targets or (config.class_incremental and t == 1):
         return Classifier.logit_cross_entropy_loss(Y_hat_ls, all_targets)
     else:
         return Classifier.knowledge_distillation_loss(Y_hat_ls, all_targets)
 
-def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net, 
-                                                    device, config, writer, t):
+
+def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
+                      device, config, writer, t):
     """Train continual learning experiments on MNIST dataset for one task.
     In this function the main training logic is implemented. 
     After setting the optimizers for the network and hypernetwork if 
@@ -568,15 +572,15 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
         net_hnet.train()
         params_to_regularize = list(net_hnet.theta)
         optimizer = optim.Adam(params_to_regularize,
-            lr=config.class_lr, betas=(0.9, 0.999))
+                               lr=config.class_lr, betas=(0.9, 0.999))
 
-        c_emb_optimizer = optim.Adam([net_hnet.get_task_emb(t)], 
-               lr=config.class_lr_emb, betas=(0.9, 0.999))
+        c_emb_optimizer = optim.Adam([net_hnet.get_task_emb(t)],
+                                     lr=config.class_lr_emb, betas=(0.9, 0.999))
     else:
         net.train()
         net_hnet = None
         optimizer = optim.Adam(net.parameters(),
-                lr=config.class_lr, betas=(0.9, 0.999))
+                               lr=config.class_lr, betas=(0.9, 0.999))
 
     # dont train the replay model if available
     if dec is not None:
@@ -592,14 +596,13 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
             targets_C = None
             prev_theta = [p.detach().clone() for p in net_hnet.theta]
             prev_task_embs = [p.detach().clone() for p in \
-                                                      net_hnet.get_task_embs()]
+                              net_hnet.get_task_embs()]
         else:
             # Compute targets for the regularizer once and keep them all in
             # memory -> Memory expensive.
             targets_C = hreg.get_current_targets(t, net_hnet)
             prev_theta = None
             prev_task_embs = None
-
 
     dhandler_class.reset_batch_generator()
 
@@ -611,12 +614,12 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
     if config.epochs == -1:
         training_iterations = config.n_iter
     else:
-        assert(config.epochs > 0)
+        assert (config.epochs > 0)
         training_iterations = config.epochs * \
-        int(np.ceil(dhandler_class.num_train_samples / config.batch_size))
+                              int(np.ceil(dhandler_class.num_train_samples / config.batch_size))
 
     if config.class_incremental:
-        training_iterations = int(training_iterations/config.out_dim)
+        training_iterations = int(training_iterations / config.out_dim)
 
     # Whether we will calculate the regularizer.
     calc_reg = t > 0 and config.class_beta > 0 and config.training_with_hnet
@@ -626,7 +629,7 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
         hnet_reg_batch_size = config.hnet_reg_batch_size
     else:
         hnet_reg_batch_size = None
-    
+
     for i in range(training_iterations):
 
         # set optimizer to zero
@@ -636,16 +639,16 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
 
         # Get real data
         real_batch = dhandler_class.next_train_batch(config.batch_size)
-        X_real = dhandler_class.input_to_torch_tensor(real_batch[0], device, 
-                                                                mode='train')
-        T_real = dhandler_class.output_to_torch_tensor(real_batch[1],device, 
-                                                                mode='train')
-        
+        X_real = dhandler_class.input_to_torch_tensor(real_batch[0], device,
+                                                      mode='train')
+        T_real = dhandler_class.output_to_torch_tensor(real_batch[1], device,
+                                                       mode='train')
+
         if i % 100 == 0 and config.show_plots:
             fig_real = _plotImages(X_real, config)
-            writer.add_figure('train_class_' + str(t) + '_real', 
-                                                    fig_real, global_step=i)
-        
+            writer.add_figure('train_class_' + str(t) + '_real',
+                              fig_real, global_step=i)
+
         #################################################
         # Choosing output heads and constructing targets
         ################################################# 
@@ -654,14 +657,14 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
         # we construct a target for every single class/task
         if config.class_incremental or config.training_task_infer:
             # in the beginning of training, we look at two output neuron
-            task_out = [0, t+1]
+            task_out = [0, t + 1]
             T_real = torch.zeros((config.batch_size, task_out[1])).to(device)
             T_real[:, task_out[1] - 1] = 1
 
         elif config.cl_scenario == 1 or config.cl_scenario == 2:
             if config.cl_scenario == 1:
                 # take the task specific output neuron
-                task_out = [t*config.out_dim, t*config.out_dim + config.out_dim]
+                task_out = [t * config.out_dim, t * config.out_dim + config.out_dim]
             else:
                 # always all output neurons, only one head is used
                 task_out = [0, config.out_dim]
@@ -670,16 +673,16 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
             # do not have to know the number of tasks before we start 
             # learning.
             if not config.infer_output_head:
-                task_out = [0,(t+1)*config.out_dim]
-                T_real = torch.cat((torch.zeros((config.batch_size, 
-                        t * config.out_dim)).to(device), 
-                        T_real), dim=1)
+                task_out = [0, (t + 1) * config.out_dim]
+                T_real = torch.cat((torch.zeros((config.batch_size,
+                                                 t * config.out_dim)).to(device),
+                                    T_real), dim=1)
             # this is a special case where we will infer the task id by another 
             # neural network so we can train on the correct output head direclty
             # and use the infered output head to compute the prediction
             else:
-                task_out =[t*config.out_dim, t*config.out_dim + config.out_dim]
-        
+                task_out = [t * config.out_dim, t * config.out_dim + config.out_dim]
+
         # compute loss of current data
         if config.training_with_hnet:
             weights_c = net_hnet.forward(t)
@@ -693,40 +696,41 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
             soft_label = 0.95
             num_classes = T_real.shape[1]
             soft_targets = torch.where(T_real == 1,
-                torch.Tensor([soft_label]).to(device),
-                torch.Tensor([(1 - soft_label) / (num_classes-1)]).to(device))
+                                       torch.Tensor([soft_label]).to(device),
+                                       torch.Tensor([(1 - soft_label) / (num_classes - 1)]).to(device))
             soft_targets = soft_targets.to(device)
             loss_task = Classifier.softmax_and_cross_entropy(Y_hat_logits,
-                                                        soft_targets)
+                                                             soft_targets)
         else:
-            loss_task =Classifier.softmax_and_cross_entropy(Y_hat_logits,T_real)
-        
+            loss_task = Classifier.softmax_and_cross_entropy(Y_hat_logits, T_real)
+
         ############################
         # compute loss for fake data
         ############################
 
         # Get fake data (of all tasks up until now and merge into list)
         if t >= 1 and not config.training_with_hnet:
-            fake_loss = get_fake_data_loss(dhandlers_rp, net, dec,d_hnet,device, 
-                                        config, writer, t, i, net_copy)
-            loss_task = (1-config.l_rew)*loss_task + config.l_rew*fake_loss
+            fake_loss = get_fake_data_loss(dhandlers_rp, net, dec, d_hnet, device,
+                                           config, writer, t, i, net_copy)
+            loss_task = (1 - config.l_rew) * loss_task + config.l_rew * fake_loss
 
-        
         loss_task.backward(retain_graph=calc_reg, create_graph=calc_reg and \
-                           config.backprop_dt)
-     
+                                                               config.backprop_dt)
+
         # compute hypernet loss and fix embedding -> change current embs
         if calc_reg:
             if config.no_lookahead:
                 dTheta = None
             else:
                 dTheta = opstep.calc_delta_theta(optimizer,
-                    config.use_sgd_change, lr=config.class_lr,
-                    detach_dt=not config.backprop_dt)          
-            loss_reg = config.class_beta*hreg.calc_fix_target_reg(net_hnet, t,
-                        targets=targets_C, mnet=net, dTheta=dTheta, dTembs=None,
-                        prev_theta=prev_theta, prev_task_embs=prev_task_embs,
-                        batch_size=hnet_reg_batch_size)
+                                                 config.use_sgd_change, lr=config.class_lr,
+                                                 detach_dt=not config.backprop_dt)
+            loss_reg = config.class_beta * hreg.calc_fix_target_reg(net_hnet, t,
+                                                                    targets=targets_C, mnet=net, dTheta=dTheta,
+                                                                    dTembs=None,
+                                                                    prev_theta=prev_theta,
+                                                                    prev_task_embs=prev_task_embs,
+                                                                    batch_size=hnet_reg_batch_size)
             loss_reg.backward()
 
         # compute backward passloss_task.backward()
@@ -744,12 +748,12 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
             Y_hat = F.softmax(Y_hat_logits, dim=1)
             classifier_accuracy = Classifier.accuracy(Y_hat, T_real) * 100.0
             writer.add_scalar('train/task_%d/class_accuracy' % t,
-                                                    classifier_accuracy, i)
+                              classifier_accuracy, i)
             writer.add_scalar('train/task_%d/loss_task' % t,
-                                                    loss_task, i)
+                              loss_task, i)
             if t >= 1 and not config.training_with_hnet:
                 writer.add_scalar('train/task_%d/fake_loss' % t,
-                                                    fake_loss, i)
+                                  fake_loss, i)
 
         # plot some gradient statistics
         if i % 200 == 0:
@@ -766,24 +770,25 @@ def train_class_one_t(dhandler_class, dhandlers_rp, dec, d_hnet, net,
                 total_norm = total_norm ** (1. / 2)
                 # TODO write gradient histograms?
                 writer.add_scalar('train/task_%d/main_params_grad_norms' % t,
-                                                    total_norm, i)
+                                  total_norm, i)
 
             if net_hnet is not None and config.train_class_embeddings:
-                    total_norm = 0
-                    for p in [net_hnet.get_task_emb(t)]:
-                        param_norm = p.grad.data.norm(2)
-                        total_norm += param_norm.item() ** 2
-                    total_norm = total_norm ** (1. / 2)
-                    writer.add_scalar('train/task_%d/hnet_emb_grad_norms' % t,
-                                                    total_norm, i)
-                                                                                                 
+                total_norm = 0
+                for p in [net_hnet.get_task_emb(t)]:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+                total_norm = total_norm ** (1. / 2)
+                writer.add_scalar('train/task_%d/hnet_emb_grad_norms' % t,
+                                  total_norm, i)
+
         if i % 200 == 0:
             msg = 'Training step {}: Classifier Accuracy: {:.3f} ' + \
-                '(on current training batch).'
+                  '(on current training batch).'
             print(msg.format(i, classifier_accuracy))
 
+
 def train_tasks(dhandlers_class, dhandlers_rp, enc, dec, d_hnet, class_net,
-                                      device, config, writer, infer_net = None):
+                device, config, writer, infer_net=None):
     """ Train continual learning experiments on MNIST dataset.
     This is a helper function that loops over the range of tasks and 
     iteratively starts training the classifier and the replay model 
@@ -808,12 +813,12 @@ def train_tasks(dhandlers_class, dhandlers_rp, enc, dec, d_hnet, class_net,
     """
 
     print('Training MNIST (task inference) classifier ...')
-    
-    if not (config.upper_bound or (config.infer_task_id and 
-                                                      config.cl_scenario == 1)):
-            if not config.trained_replay_model:
-                embd_list = init_plotting_embedding(dhandlers_rp, 
-                                                        d_hnet, writer, config)
+
+    if not (config.upper_bound or (config.infer_task_id and
+                                   config.cl_scenario == 1)):
+        if not config.trained_replay_model:
+            embd_list = init_plotting_embedding(dhandlers_rp,
+                                                d_hnet, writer, config)
 
     during_accs = []
     # Begin training loop for the single tasks
@@ -822,34 +827,34 @@ def train_tasks(dhandlers_class, dhandlers_rp, enc, dec, d_hnet, class_net,
         if class_net is not None:
             if not (config.class_incremental and t == 0):
                 print("Training classifier on data handler: ", t)
-                train_class_one_t(dhandler, dhandlers_rp, dec, 
-                                   d_hnet, class_net, device, config, writer, t)
+                train_class_one_t(dhandler, dhandlers_rp, dec,
+                                  d_hnet, class_net, device, config, writer, t)
         else:
             if t > 0:
                 print("Training task inference system on data handler: ", t)
-                train_class_one_t(dhandler, dhandlers_rp, dec, 
-                                   d_hnet, infer_net, device, config, writer, t)
-        
+                train_class_one_t(dhandler, dhandlers_rp, dec,
+                                  d_hnet, infer_net, device, config, writer, t)
+
         if not (t == 0 and class_net is None):
-            durring_cc =  test([dhandler], class_net, infer_net, device, 
-                            config,  writer, task_id=t)
+            durring_cc = test([dhandler], class_net, infer_net, device,
+                              config, writer, task_id=t)
             during_accs.append(durring_cc)
 
-        if not (config.upper_bound or (config.infer_task_id and 
-                                                      config.cl_scenario == 1)):
-            
-            if not config.trained_replay_model and t < config.num_tasks-1:
+        if not (config.upper_bound or (config.infer_task_id and
+                                       config.cl_scenario == 1)):
+
+            if not config.trained_replay_model and t < config.num_tasks - 1:
                 if config.replay_method == 'gan':
-                    train_gan_one_t(dhandlers_rp[t], enc, dec, d_hnet, device, 
-                                                  config, writer, embd_list, t)
+                    train_gan_one_t(dhandlers_rp[t], enc, dec, d_hnet, device,
+                                    config, writer, embd_list, t)
                 else:
-                    train_vae_one_t(dhandlers_rp[t], enc, dec, d_hnet, device, 
-                                                  config, writer, embd_list, t)
-    
+                    train_vae_one_t(dhandlers_rp[t], enc, dec, d_hnet, device,
+                                    config, writer, embd_list, t)
+
     return during_accs
 
-def run(mode='split'):  
 
+def run(mode='split'):
     """ Method to start MNIST experiments. 
     Depending on the configurations, here we control the creation and 
     training of the different (replay) modules for classification or 
@@ -863,50 +868,50 @@ def run(mode='split'):
                 - ``split``
                 - ``perm``
     """
-    
+
     ### Get command line arguments.
     config = train_args.parse_cmd_arguments(mode=mode)
-   
-    assert(config.experiment == "splitMNIST" or \
-                                          config.experiment == "permutedMNIST")
+
+    assert (config.experiment == "splitMNIST" or \
+            config.experiment == "permutedMNIST")
     if not config.dont_set_default:
         config = _set_default(config)
 
     if config.infer_output_head:
-        assert(config.infer_task_id == True)
-    
+        assert (config.infer_task_id == True)
+
     if config.cl_scenario == 1:
-        assert(config.class_incremental == False)
-        assert(config.single_class_replay == False)
+        assert (config.class_incremental == False)
+        assert (config.single_class_replay == False)
 
     if config.infer_with_entropy:
-        assert(config.infer_task_id == True)
+        assert (config.infer_task_id == True)
     # single class only implemented for splitMNIST
     if config.single_class_replay or config.class_incremental:
-        assert(config.experiment == "splitMNIST")
-    
+        assert (config.experiment == "splitMNIST")
+
     # check range of number of tasks
-    assert(config.num_tasks > 0)
+    assert (config.num_tasks > 0)
     if config.experiment == "splitMNIST":
         if config.class_incremental:
-            assert(config.num_tasks <= 10)
+            assert (config.num_tasks <= 10)
         else:
-            assert(config.num_tasks <= 5)
+            assert (config.num_tasks <= 5)
 
     # the following combination is not supported 
     if config.infer_task_id:
-        assert(config.class_incremental == False)
+        assert (config.class_incremental == False)
 
     # enforce correct cl scenario
     if config.class_incremental:
         config.single_class_replay = 1
         config.cl_scenario = 3
         print("Attention: Cl scenario 3 is enforced!")
-        steps = 1   
+        steps = 1
     else:
-        steps = 2 
-    
-    #### Get data handlers
+        steps = 2
+
+        #### Get data handlers
     dhandlers_class = train_utils._generate_tasks(config, steps)
 
     # decide if you want to train a replay model
@@ -916,12 +921,12 @@ def run(mode='split'):
     if config.upper_bound or (config.infer_task_id and config.cl_scenario == 1):
         train_rp = False
     else:
-         train_rp = True
+        train_rp = True
 
     ### Get replay model trained continually with hnet.
     dec, d_hnet, enc, dhandlers_rp, device, writer, config = \
-                                                  replay_model(config, train_rp)
-    
+        replay_model(config, train_rp)
+
     # if we have a replay model trained, we now train a classifier
     # that either solves a task directly (HNET+replay) or we train a model
     # that infers the task from input.
@@ -929,21 +934,21 @@ def run(mode='split'):
     ###############################
     # Train task inference network
     ###############################
-    
+
     if config.infer_task_id and not config.cl_scenario == 1 and \
-                                                not config.infer_with_entropy:
+            not config.infer_with_entropy:
         print("Training task inference model ...")
         config.trained_replay_model = False
         config.training_task_infer = True
         config.training_with_hnet = False
         ### Generate task inference network.
-        infer_net = train_utils.generate_classifier(config, 
+        infer_net = train_utils.generate_classifier(config,
                                                     dhandlers_class, device)
 
         ### Train the task inference network.
-        config.during_accs_inference =  train_tasks(dhandlers_class, 
-                                      dhandlers_rp, enc, dec, d_hnet, None, 
-                                device, config, writer, infer_net = infer_net)
+        config.during_accs_inference = train_tasks(dhandlers_class,
+                                                   dhandlers_rp, enc, dec, d_hnet, None,
+                                                   device, config, writer, infer_net=infer_net)
         ### Test network.
         print("Testing task inference model ...")
         test(dhandlers_class, None, infer_net, device, config, writer)
@@ -966,16 +971,16 @@ def run(mode='split'):
     ###################
     # Train classifier
     ###################
-  
+
     config.training_task_infer = False
-    
+
     print("Training final classifier ...")
     ### Generate another classifier network.
-    class_nets = train_utils.generate_classifier(config, 
-                                                    dhandlers_class, device)
+    class_nets = train_utils.generate_classifier(config,
+                                                 dhandlers_class, device)
     ### Train the network.
-    config.during_accs_final = train_tasks(dhandlers_class, dhandlers_rp, enc, 
-                    dec, d_hnet, class_nets, device, config, writer, infer_net)
+    config.during_accs_final = train_tasks(dhandlers_class, dhandlers_rp, enc,
+                                           dec, d_hnet, class_nets, device, config, writer, infer_net)
 
     print("Testing final classifier ...")
     ### Test network.
@@ -985,6 +990,7 @@ def run(mode='split'):
     writer.close()
 
     print('Program finished successfully.')
-    
+
+
 if __name__ == '__main__':
     run()
