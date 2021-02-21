@@ -284,7 +284,8 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         self._last_hidden_size = prev_dim
 
         # Output layers.
-        self._out_dims = []  # [[7000, 64], [7000]] in CIFAR resnet.
+        self._out_dims = []  # [[7000, 64], [7000]] in CIFAR resnet.K
+
         for i, dims in enumerate(self.target_shapes):
             nouts = np.prod(dims)
             self._out_dims.append([nouts, self._last_hidden_size])
