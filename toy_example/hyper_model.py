@@ -284,7 +284,7 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
         self._last_hidden_size = prev_dim
 
         # Output layers.
-        self._out_dims = []
+        self._out_dims = []  # [[7000, 64], [7000]] in CIFAR resnet.
         for i, dims in enumerate(self.target_shapes):
             nouts = np.prod(dims)
             self._out_dims.append([nouts, self._last_hidden_size])
@@ -317,8 +317,8 @@ class HyperNetwork(nn.Module, CLHyperNetInterface):
                     init_params(self._theta[i])
 
     # @override from CLHyperNetInterface
-    def forward(self, task_id=None, theta=None, dTheta=None, task_emb=None,
-                ext_inputs=None, squeeze=True):
+    def forward(self, task_id=None, theta=None, dTheta=None,
+                task_emb=None, ext_inputs=None, squeeze=True):
         """Implementation of abstract super class method."""
         if task_id is None and task_emb is None:
             raise Exception('The hyper network has to get either a task ID' +
